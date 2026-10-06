@@ -98,6 +98,60 @@
     #dev-auth-screen{z-index:14;display:grid;place-items:center;padding:16px;background:#080d1deb}.dev-auth-wrap{width:min(100%,340px);padding:22px;border:2px solid #b49b60;background:#111d36;box-shadow:0 8px 30px #0009;font-family:Arial,Tahoma,sans-serif}.dev-auth-wrap h2{font-size:1.2rem;line-height:1.5;margin:0 0 17px;color:#f3d68f}.dev-auth-wrap label{display:block;color:#e1e7f2;font-size:.9rem;margin-bottom:7px}
     #dev-password{display:block;width:100%;min-height:44px;padding:9px 11px;border:1px solid #7a89ae;border-radius:3px;background:#080f23;color:#fff3cc;font:18px Arial,sans-serif;direction:ltr;letter-spacing:.18em;-webkit-user-select:text!important;user-select:text!important;touch-action:manipulation}.dev-auth-actions,.dev-panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.dev-auth-actions button{flex:1;min-height:42px}.dev-panel-actions{margin-bottom:12px}#dev-auth-error{margin:10px 0 0;min-height:1.5em;color:#ffb6ab;font-size:.85rem;line-height:1.5}.dev-auth-actions button:first-child{color:#f5d88d;border-color:#bd9e52}
 
+    /* Desktop HUD uses native font sizes, scaled from the actual play area. */
+    #game{width:min(100%,1280px,calc((100svh - 88px)*16/9));--ui-unit:1px}
+    #game:fullscreen{width:100%;height:100%;max-width:none;display:flex;flex-direction:column;border:0}
+    #game:fullscreen #topbar{flex:none}
+    #game:fullscreen #viewport{flex:1;min-height:0;aspect-ratio:auto}
+    #game.desktop-ui #topbar{min-height:46px}
+    #game.desktop-ui #objective{font-size:clamp(14px,calc(11 * var(--ui-unit)),20px);letter-spacing:.025em}
+    #game.desktop-ui .small-button{font-size:clamp(14px,calc(11 * var(--ui-unit)),20px);min-height:clamp(34px,calc(26 * var(--ui-unit)),42px);padding:5px 10px}
+    #game.desktop-ui #battle-ui{font-family:Arial,Tahoma,sans-serif}
+    #game.desktop-ui #battle-message{left:calc(8 * var(--ui-unit));top:calc(8 * var(--ui-unit));max-width:36%;padding:calc(7 * var(--ui-unit)) calc(9 * var(--ui-unit));font:700 calc(14 * var(--ui-unit))/1.5 Arial,Tahoma,sans-serif;text-shadow:0 1px 1px #350609}
+    #game.desktop-ui #command-window{top:calc(78 * var(--ui-unit));width:calc(220 * var(--ui-unit));min-height:calc(174 * var(--ui-unit));padding:calc(38 * var(--ui-unit)) calc(48 * var(--ui-unit)) calc(8 * var(--ui-unit));border-width:calc(2 * var(--ui-unit))}
+    #game.desktop-ui #command-window::before{top:calc(4 * var(--ui-unit));height:calc(30 * var(--ui-unit));padding-left:calc(8 * var(--ui-unit));font-size:calc(14 * var(--ui-unit))}
+    #game.desktop-ui #command-window::after{right:calc(8 * var(--ui-unit));top:calc(4 * var(--ui-unit));font-size:calc(14 * var(--ui-unit))}
+    #game.desktop-ui .command{min-height:calc(32 * var(--ui-unit));padding:calc(3 * var(--ui-unit)) calc(4 * var(--ui-unit));font:700 calc(14 * var(--ui-unit))/1.5 Arial,Tahoma,sans-serif;letter-spacing:0;text-shadow:0 1px 1px #420509}
+    #game.desktop-ui .command::before{width:calc(17 * var(--ui-unit))}
+    #game.desktop-ui .command[data-action=auto],#game.desktop-ui .command[data-action=run]{width:calc(40 * var(--ui-unit));height:calc(128 * var(--ui-unit));padding:calc(5 * var(--ui-unit));font-size:calc(13 * var(--ui-unit))}
+    #game.desktop-ui .command[data-action=auto]{left:calc(-44 * var(--ui-unit))}
+    #game.desktop-ui .command[data-action=run]{right:calc(-44 * var(--ui-unit))}
+    [dir=rtl] #game.desktop-ui .command[data-action=auto],[dir=rtl] #game.desktop-ui .command[data-action=run]{writing-mode:horizontal-tb;white-space:nowrap;padding:calc(3 * var(--ui-unit)) 0;font-size:calc(12 * var(--ui-unit))}
+    #game.desktop-ui #battle-playback{top:calc(3 * var(--ui-unit));width:calc(110 * var(--ui-unit))}
+    #game.desktop-ui #battle-fast{font-size:calc(11 * var(--ui-unit));min-height:calc(29 * var(--ui-unit));padding:calc(3 * var(--ui-unit))}
+    #command-window.spells-open,#command-window.skill-grid,#command-window.items-open{max-height:calc(100% - 170px);overflow-y:auto}
+    #game.desktop-ui #command-window.spells-open,#game.desktop-ui #command-window.skill-grid{width:calc(320 * var(--ui-unit));padding-inline:calc(12 * var(--ui-unit));top:calc(70 * var(--ui-unit));max-height:calc(100% - 198 * var(--ui-unit));overflow:auto}
+    #game.desktop-ui #command-window.items-open{width:calc(330 * var(--ui-unit));padding-inline:calc(12 * var(--ui-unit))}
+    #game.desktop-ui #command-window.skill-grid .command,#game.desktop-ui .item-menu .command{min-height:calc(38 * var(--ui-unit));font-size:calc(13 * var(--ui-unit));padding:calc(4 * var(--ui-unit));line-height:1.5}
+    #game.desktop-ui #enemy-targets{left:calc(8 * var(--ui-unit));bottom:calc(128 * var(--ui-unit));width:calc(162 * var(--ui-unit));gap:calc(5 * var(--ui-unit))}
+    #game.desktop-ui .enemy-target{padding:calc(6 * var(--ui-unit));font:700 calc(13 * var(--ui-unit))/1.4 Arial,Tahoma,sans-serif}
+    #game.desktop-ui .enemy-target small{font-size:calc(12 * var(--ui-unit));line-height:1.4}
+    #game.desktop-ui .enemy-effects{font-size:calc(11 * var(--ui-unit))!important}
+    #game.desktop-ui #status-window,#game.desktop-ui #status-window.party-status{width:min(calc(690 * var(--ui-unit)),96%);height:calc(110 * var(--ui-unit));bottom:calc(9 * var(--ui-unit));gap:calc(7 * var(--ui-unit))}
+    #game.desktop-ui .party-card{max-width:calc(224 * var(--ui-unit));grid-template-columns:calc(56 * var(--ui-unit)) minmax(0,1fr);gap:calc(7 * var(--ui-unit));padding:calc(6 * var(--ui-unit));border-width:calc(2 * var(--ui-unit))}
+    #game.desktop-ui .party-card .battle-portrait{width:calc(56 * var(--ui-unit));height:calc(94 * var(--ui-unit))}
+    #game.desktop-ui .party-card .card-heading{font-size:calc(14 * var(--ui-unit));margin-bottom:calc(7 * var(--ui-unit))}
+    #game.desktop-ui .party-card .card-heading strong{font:inherit}
+    #game.desktop-ui .party-card .card-heading small{font-size:calc(11 * var(--ui-unit))}
+    #game.desktop-ui .party-card .mini-row{font-size:calc(12 * var(--ui-unit));line-height:1.3}
+    #game.desktop-ui .party-card .meter{height:calc(8 * var(--ui-unit));margin:calc(2 * var(--ui-unit)) 0 calc(5 * var(--ui-unit))}
+    #game.desktop-ui .party-card .battle-portrait::before{top:calc(43 * var(--ui-unit));left:calc(8 * var(--ui-unit));right:calc(8 * var(--ui-unit));height:calc(6 * var(--ui-unit))}
+    #game.desktop-ui .party-card .battle-portrait::after{left:calc(16 * var(--ui-unit));bottom:calc(15 * var(--ui-unit));width:calc(15 * var(--ui-unit))}
+    #game.desktop-ui #dialogue-box{padding:calc(18 * var(--ui-unit)) calc(18 * var(--ui-unit)) calc(12 * var(--ui-unit))}
+    #game.desktop-ui #dialogue-text{font-family:Arial,Tahoma,sans-serif;font-size:clamp(20px,calc(18 * var(--ui-unit)),34px);line-height:1.65;text-shadow:0 1px 1px #000}
+    #game.desktop-ui #speaker{font-size:clamp(15px,calc(13 * var(--ui-unit)),24px)}
+    #game.desktop-ui #continue{font-size:clamp(12px,calc(10 * var(--ui-unit)),18px)}
+    #game.desktop-ui .dialogue-choice{font-size:clamp(17px,calc(14 * var(--ui-unit)),26px);min-height:calc(36 * var(--ui-unit))}
+    #game.desktop-ui #prompt{font-size:clamp(15px,calc(12 * var(--ui-unit)),22px)}
+    #game.desktop-ui .stats-wrap{width:min(92%,calc(700 * var(--ui-unit)));font-size:clamp(16px,calc(14 * var(--ui-unit)),24px)}
+    #game.desktop-ui .stats-wrap h2{font-size:clamp(22px,calc(20 * var(--ui-unit)),32px)}
+    #game.desktop-ui .stats-sheet dl,#game.desktop-ui .market-row,#game.desktop-ui .stats-tip,#game.desktop-ui .equipment-lines,#game.desktop-ui .skill-reference-row small{font-size:clamp(16px,calc(13 * var(--ui-unit)),23px)}
+    #game.desktop-ui .skill-reference-row strong{font-size:clamp(17px,calc(14 * var(--ui-unit)),24px)}
+    #game.desktop-ui .market-row small{font-size:.9em;line-height:1.5}
+    @media(max-width:650px){#game{width:100%}}
+    @media(max-height:570px) and (orientation:landscape){#game{width:100%}}
+
+
 </style>
 </head>
 <body>
@@ -1699,6 +1753,25 @@ document.addEventListener('pointercancel',endActionPress,true);
 document.addEventListener('click',consumeActionClick,true);
 document.addEventListener('keydown',()=>{lastActionPress=null},true);
 window.addEventListener?.('blur',()=>{actionPresses.clear();lastActionPress=null});
+
+// Scale desktop menus from their play area; phone layouts retain their sizing.
+(()=>{
+ const game=$('game'),viewport=$('viewport');
+ function resizeReadableUI(){
+  const bounds=viewport.getBoundingClientRect();
+  const desktop=bounds.width>=900&&bounds.height>=480;
+  const scale=desktop?Math.max(1,Math.min(2.25,bounds.width/800,bounds.height/450)):1;
+  game.classList.toggle('desktop-ui',desktop);
+  game.style.setProperty?.('--ui-unit',scale.toFixed(4)+'px');
+ }
+ if(typeof ResizeObserver!=='undefined'){
+  const observer=new ResizeObserver(resizeReadableUI);observer.observe(viewport);
+ }
+ window.addEventListener?.('resize',resizeReadableUI);
+ document.addEventListener('fullscreenchange',resizeReadableUI);
+ resizeReadableUI();
+})();
+
 
 $('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',toggleMusic);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
 })();
