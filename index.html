@@ -152,11 +152,27 @@
     @media(max-height:570px) and (orientation:landscape){#game{width:100%}}
 
 
+    #game{position:relative}
+    #music-panel{position:absolute;right:10px;top:58px;width:min(300px,calc(100% - 20px));z-index:30;padding:16px;border:2px solid #bda365;border-radius:5px;background:#101a31;box-shadow:0 6px 25px #000b;font-family:Arial,Tahoma,sans-serif;font-size:16px}
+    [dir=rtl] #music-panel{right:auto;left:10px}
+    .music-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}
+    #music-settings-title{margin:0;color:#f4d995;font-size:18px}
+    #music-settings-close{width:32px;min-height:32px;padding:0;border:1px solid #67799f;background:#18253e;color:#f4eedb;font:22px Arial;cursor:pointer}
+    .music-volume-row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    #music-volume-value{color:#f4d995;direction:ltr;font-weight:700}
+    #music-volume{display:block;width:100%;min-height:42px;margin:8px 0;accent-color:#e8c56e;direction:ltr;touch-action:none;cursor:pointer}
+    #music-mute{width:100%;min-height:40px;padding:8px;border:1px solid #887e65;background:#23324c;color:#fff2cf;font:700 16px Arial,Tahoma,sans-serif;cursor:pointer}
+    #music-panel button:focus-visible,#music-volume:focus-visible{outline:2px solid #ffe19c;outline-offset:3px}
+    #music-panel button{touch-action:manipulation}
+
+
 </style>
 </head>
 <body>
 <main id="game">
-  <header id="topbar"><button id="dev-button" class="dev-corner" type="button" aria-label="Development tools">⚙</button><div id="objective">PROTOTYPE · CHAPTER I</div><div class="top-actions"><button id="stats-button" class="small-button" type="button">Stats</button><button id="music-toggle" class="small-button" type="button">Music: On</button><button id="restart" class="small-button" type="button">Restart</button><button id="fullscreen" class="small-button" type="button">Fullscreen</button></div></header>
+  <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Music volume</h2><button id="music-settings-close" type="button" aria-label="Close music settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute music</button></section>
+
+  <header id="topbar"><button id="dev-button" class="dev-corner" type="button" aria-label="Development tools">⚙</button><div id="objective">PROTOTYPE · CHAPTER I</div><div class="top-actions"><button id="stats-button" class="small-button" type="button">Stats</button><button id="music-toggle" class="small-button" type="button" aria-controls="music-panel" aria-expanded="false">Music: On</button><button id="restart" class="small-button" type="button">Restart</button><button id="fullscreen" class="small-button" type="button">Fullscreen</button></div></header>
   <section id="viewport" aria-label="Top-down fantasy role-playing game">
     <canvas id="canvas" width="512" height="288"></canvas>
     <div id="title-screen" class="layer"><div class="title-wrap"><p id="title-kicker" class="kicker">A classic top-down RPG prototype</p><h1 id="game-title">The Fractured<br>Constellation</h1><p id="chapter-subtitle" class="subtitle">Chapter I · Ashes Beneath the Stars</p><div id="language-select" aria-label="Language"><button class="language-button selected" data-lang="en" type="button">English</button><button class="language-button" data-lang="ar" type="button">العربية</button></div><button id="new-game" class="main-button" type="button">New Game</button><p id="controls-help" class="subtitle">Move: arrows / WASD · Interact: Enter / Space / Z</p></div></div>
@@ -1773,7 +1789,65 @@ window.addEventListener?.('blur',()=>{actionPresses.clear();lastActionPress=null
 })();
 
 
-$('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',toggleMusic);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
+// A music-only master level, shared by synthesized and recorded soundtracks.
+const MUSIC_SETTINGS_KEY='fractured_music_preferences_v1';
+let musicVolume=100;
+try{
+ const saved=JSON.parse(localStorage.getItem(MUSIC_SETTINGS_KEY)||'null');
+ if(saved&&Number.isFinite(saved.volume))musicVolume=Math.max(0,Math.min(100,saved.volume));
+ if(saved&&typeof saved.muted==='boolean')audio.on=!saved.muted;
+}catch(_){}
+function saveMusicSettings(){try{localStorage.setItem(MUSIC_SETTINGS_KEY,JSON.stringify({volume:musicVolume,muted:!audio.on}))}catch(_){}}
+function syncMusicVolume(){
+ const gain=audio.musicGain?.gain;if(!gain)return;
+ const level=audio.on?1.35*musicVolume/100:0;
+ gain.cancelScheduledValues?.(audio.ctx.currentTime);
+ if(gain.setTargetAtTime)gain.setTargetAtTime(level,audio.ctx.currentTime,.035);
+ else gain.value=level;
+}
+function renderMusicSettings(){
+ $('music-toggle').textContent=audio.on?tr('Music: '+Math.round(musicVolume)+'%','الموسيقى: '+Math.round(musicVolume)+'٪'):tr('Music: Muted','الموسيقى: مكتومة');
+ $('music-toggle').title=tr('Adjust music volume','ضبط صوت الموسيقى');
+ $('music-settings-title').textContent=tr('Music volume','صوت الموسيقى');
+ $('music-volume-label').textContent=tr('Volume','مستوى الصوت');
+ $('music-volume-value').textContent=Math.round(musicVolume)+tr('%','٪');
+ $('music-volume').value=String(musicVolume);
+ $('music-volume').setAttribute?.('aria-valuetext',Math.round(musicVolume)+tr(' percent',' بالمئة'));
+ $('music-mute').textContent=audio.on?tr('Mute music','كتم الموسيقى'):tr('Unmute music','تشغيل الموسيقى');
+ $('music-mute').setAttribute?.('aria-pressed',String(!audio.on));
+ $('music-settings-close').setAttribute?.('aria-label',tr('Close music settings','إغلاق إعدادات الموسيقى'));
+}
+function setMusicVolume(value){
+ const number=Number(value);if(!Number.isFinite(number))return;
+ musicVolume=Math.max(0,Math.min(100,number));syncMusicVolume();saveMusicSettings();renderMusicSettings();
+}
+function closeMusicSettings(){
+ $('music-panel').classList.add('hidden');$('music-toggle').setAttribute?.('aria-expanded','false');
+}
+function openMusicSettings(){
+ if(!$('music-panel').classList.contains('hidden')){closeMusicSettings();return}
+ state.keys={};resetJoystick();renderMusicSettings();$('music-panel').style.top=(($('topbar').offsetHeight||50)+8)+'px';$('music-panel').classList.remove('hidden');
+ $('music-toggle').setAttribute?.('aria-expanded','true');$('music-volume').focus?.();
+}
+const musicVolumePrevious={initAudio,toggleMusic,applyLanguage,reset,abortCurrentFlow};
+initAudio=function(){const context=musicVolumePrevious.initAudio();syncMusicVolume();return context};
+toggleMusic=async function(){await musicVolumePrevious.toggleMusic();syncMusicVolume();saveMusicSettings();renderMusicSettings()};
+applyLanguage=function(){musicVolumePrevious.applyLanguage();renderMusicSettings()};
+reset=function(){closeMusicSettings();musicVolumePrevious.reset();syncMusicVolume();renderMusicSettings()};
+abortCurrentFlow=function(){closeMusicSettings();musicVolumePrevious.abortCurrentFlow()};
+$('music-volume').addEventListener('input',e=>setMusicVolume(e.target.value));
+$('music-mute').addEventListener('click',()=>toggleMusic());
+$('music-settings-close').addEventListener('click',closeMusicSettings);
+$('music-panel').addEventListener('keydown',e=>{
+ e.stopPropagation();
+ if(['Escape','x','X','z','Z'].includes(e.key)){e.preventDefault();closeMusicSettings();$('music-toggle').focus?.()}
+});
+document.addEventListener('pointerdown',e=>{
+ if(!$('music-panel').classList.contains('hidden')&&!e.target?.closest?.('#music-panel, #music-toggle'))closeMusicSettings();
+});
+
+
+$('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
 })();
 </script>
 </body>
