@@ -166,6 +166,39 @@
     #music-panel button{touch-action:manipulation}
 
 
+    /* Square portraits and an unmistakable raised card for the acting hero. */
+    .party-card{position:relative;align-items:center;transition:transform .15s ease-out,box-shadow .15s ease-out}
+    .party-card .battle-portrait{width:48px;height:48px;aspect-ratio:1}
+    .party-card .battle-portrait::before{top:22px}.party-card .battle-portrait::after{bottom:7px}
+    .party-card.active{transform:translateY(-9px);outline:3px solid #fff1a0;outline-offset:2px;box-shadow:0 0 16px #ffd66c99,0 5px 0 #60460b}
+    #game.desktop-ui .party-card .battle-portrait{width:calc(56 * var(--ui-unit));height:calc(56 * var(--ui-unit))}
+    #game.desktop-ui .party-card .battle-portrait::before{top:calc(25 * var(--ui-unit))}
+    #game.desktop-ui .party-card .battle-portrait::after{bottom:calc(9 * var(--ui-unit))}
+    #game.desktop-ui .party-card.active{transform:translateY(calc(-9 * var(--ui-unit)))}
+    #enemy-targets.floating-enemies,#game.desktop-ui #enemy-targets.floating-enemies{inset:0;width:100%;height:100%;display:block;pointer-events:none}
+    #enemy-targets.floating-enemies .enemy-target{position:absolute;transform:translate(-50%,-100%);width:clamp(88px,12%,220px);padding:5px 7px;pointer-events:auto;font:700 clamp(10px,calc(10 * var(--ui-unit)),21px)/1.3 Arial,Tahoma,sans-serif;direction:inherit;background:#101b30ed;border:1px solid #9daabe;border-radius:3px;box-shadow:0 2px 5px #0009;opacity:1;color:#fff0cb}
+    #enemy-targets.floating-enemies .enemy-target.selected{outline:2px solid #ffe29b;background:#283247}
+    .enemy-card-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-bottom:4px;font:inherit}
+    .enemy-hp-track{position:relative;height:clamp(17px,calc(14 * var(--ui-unit)),28px);overflow:hidden;border:1px solid #908361;background:#341b21;direction:ltr}
+    .enemy-hp-fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(#a6cb65,#4d8e44);transition:width .15s}
+    .enemy-hp-value{position:absolute;inset:0;display:grid;place-items:center;font:700 clamp(10px,calc(10 * var(--ui-unit)),18px)/1 Arial,Tahoma,sans-serif;color:#fff;text-shadow:0 1px 2px #000,1px 0 2px #000}
+    #enemy-targets.floating-enemies .enemy-effects{font-size:.8em!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+    #battle-message,#game.desktop-ui #battle-message{left:auto;right:8px;max-width:44%}
+    #game.desktop-ui #command-window{left:54%}
+    #game.desktop-ui #command-window.spells-open,#game.desktop-ui #command-window.skill-grid,#game.desktop-ui #command-window.items-open{left:58%}
+    .stats-sheet h3{display:flex;justify-content:space-between;align-items:center;gap:8px}.stats-sheet h3 small{font-size:.65em;color:#e0d7b5}
+    .stats-exp{font-size:.8em;color:#bdc9de;margin:0 0 10px}.stats-exp span{display:inline-block}
+    .stats-fold{margin-top:10px;border-top:1px solid #4d607e;padding-top:8px;font-size:.85em}.stats-fold summary{cursor:pointer;color:#f0d490}.stats-fold ul{padding-inline-start:20px;margin:8px 0;line-height:1.6;font-size:.9em}
+    .stats-medicine{margin-top:15px;padding-top:12px;border-top:1px solid #ad975e}.stats-medicine h3{margin:0 0 10px;color:#efcf79}
+    #stats-remedy-target{min-height:36px;padding:5px 8px;background:#101b32;border:1px solid #7a88a5;color:#fff0cc;font:inherit;touch-action:manipulation}
+    #stats-remedy-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
+    .stats-remedy{display:grid;gap:5px;min-height:64px;padding:10px;border:1px solid #718caa;background:#182d43;color:#fff0cc;text-align:start;font:inherit;cursor:pointer;touch-action:manipulation}.stats-remedy strong{font-size:.85em}.stats-remedy span{font-size:.8em;color:#cce0bd}.stats-remedy:disabled{opacity:.4;cursor:default}
+    #stats-remedy-message{min-height:1.5em;color:#d9e7ad;font-size:.85em}.stats-item-note{font-size:.8em;color:#c2cbe0}
+    @media(max-width:650px){.party-card .battle-portrait{width:30px;height:30px}.party-card .battle-portrait::before{top:13px}.party-card .battle-portrait::after{bottom:4px}#command-window,#command-window.spells-open,#command-window.skill-grid,#command-window.items-open{left:70%}#command-window.spells-open,#command-window.skill-grid,#command-window.items-open{width:55%}#stats-remedy-list{grid-template-columns:1fr 1fr}.stats-remedy{font-size:13px;padding:8px}#battle-message{max-width:55%;font-size:11px}}
+
+
+    @media(max-width:650px){#enemy-targets.floating-enemies .enemy-target{width:74px;padding:2px 4px;font-size:8px;line-height:1.2}.enemy-card-name{margin-bottom:2px}.enemy-hp-track{height:12px}.enemy-hp-value{font-size:9px}}
+
 </style>
 </head>
 <body>
@@ -1852,6 +1885,111 @@ document.addEventListener('pointerdown',e=>{
  if(!$('music-panel').classList.contains('hidden')&&!e.target?.closest?.('#music-panel, #music-toggle'))closeMusicSettings();
 });
 
+
+// Encounter knowledge is frozen for a whole battle, then used on later encounters.
+const ENEMY_KNOWLEDGE_KEY='fractured_enemy_knowledge_v1';
+let knownEnemies=new Set(),testKnownEnemies=new Set();
+try{const saved=JSON.parse(localStorage.getItem(ENEMY_KNOWLEDGE_KEY)||'[]');if(Array.isArray(saved))knownEnemies=new Set(saved.filter(x=>typeof x==='string'))}catch(_){}
+function enemyKnowledgeKey(enemy){return enemy.name.replace(/\s+(?:[A-D]|\d+)$/,'').trim()}
+function prepareEnemyKnowledge(b){
+ if(b.healthKnowledge)return;
+ const enemies=b.kind?b.enemies:[{name:'Atrox'}],known=state.devTesting?testKnownEnemies:knownEnemies;
+ b.healthKnowledge=enemies.map(e=>known.has(enemyKnowledgeKey(e)));
+ enemies.forEach(e=>known.add(enemyKnowledgeKey(e)));
+ if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
+}
+function enemyStatusLabels(e){
+ const labels=[];
+ if(e.poison?.turns>0)labels.push(tr('Poison '+e.poison.turns,'سم '+e.poison.turns));
+ if(e.sealed?.turns>0)labels.push(tr('Seal '+e.sealed.turns,'ختم '+e.sealed.turns));
+ if(e.gravity)labels.push(tr('ATK ↓ '+e.gravity.turns,'هجوم ↓ '+e.gravity.turns));
+ if(e.sabotaged)labels.push(tr('DEF ↓','دفاع ↓'));
+ if(e.stolenGold)labels.push('+'+e.stolenGold+' '+tr('loot','غنيمة'));
+ return labels;
+}
+function positionEnemyCards(panel){
+ const area=panel.getBoundingClientRect(),drawing=document.querySelector('canvas').getBoundingClientRect(),cards=[...panel.children];
+ cards.forEach(card=>{const i=Number(card.dataset.enemy),b=state.battle,pos=b.kind?enemyBattlePoint(b,i):[160,142],r=card.getBoundingClientRect();card.style.left=Math.max(r.width/2+3,Math.min(area.width-r.width/2-3,drawing.left-area.left+pos[0]/512*drawing.width))+'px';card.style.top=Math.max(r.height+2,drawing.top-area.top+(pos[1]-(b.kind?50:62))/288*drawing.height)+'px'});
+ // Small screens need a few pixels of separation between neighbouring labels.
+ for(let pass=0;pass<cards.length;pass++)for(let i=cards.length-1;i>0;i--)for(let j=i-1;j>=0;j--){
+  const later=cards[i].getBoundingClientRect(),earlier=cards[j].getBoundingClientRect();
+  if(earlier.left<later.right+2&&earlier.right>later.left-2&&earlier.bottom>later.top-2&&earlier.top<later.bottom+2){const desired=later.top-area.top-2;cards[j].style.top=Math.max(earlier.height+2,desired)+'px'}
+ }
+}
+renderTargets=function(){
+ const b=state.battle;if(!b){$('enemy-targets')?.remove();return}
+ let panel=$('enemy-targets');if(!panel){panel=document.createElement('div');panel.id='enemy-targets';ui.battle.appendChild(panel)}
+ panel.className='floating-enemies';panel.replaceChildren();prepareEnemyKnowledge(b);
+ const enemies=b.kind?b.enemies:[{name:'Atrox',ar:'أتروكس',hp:b.enemyHP,maxHP:800}];
+ if(b.kind&&(!enemies[state.target]||enemies[state.target].hp<=0))state.target=enemies.findIndex(e=>e.hp>0);
+ enemies.forEach((enemy,i)=>{
+  if(enemy.hp<=0)return;
+  const known=b.healthKnowledge[i],pos=b.kind?enemyBattlePoint(b,i):[160,142];
+  const button=document.createElement('button');button.type='button';button.className='enemy-target'+(i===(state.target||0)?' selected':'');button.dataset.enemy=String(i);button.disabled=b.busy;
+  button.style.left=(pos[0]/512*100)+'%';button.style.top=((pos[1]-(b.kind?50:62))/288*100)+'%';
+  const name=document.createElement('strong');name.className='enemy-card-name';name.textContent=tr(enemy.name,enemy.ar);button.appendChild(name);
+  const meter=document.createElement('div');meter.className='enemy-hp-track';
+  const fill=document.createElement('span');fill.className='enemy-hp-fill';fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHP*100))+'%';meter.appendChild(fill);
+  const value=document.createElement('span');value.className='enemy-hp-value';value.textContent=known?Math.max(0,enemy.hp)+' / '+enemy.maxHP:'?';meter.appendChild(value);button.appendChild(meter);
+  button.title=tr(enemy.name,enemy.ar)+' · '+(known?tr('Health','الصحة')+' '+value.textContent:tr('First encounter · health unknown','المواجهة الأولى · الصحة مجهولة'));
+  button.setAttribute?.('aria-label',button.title);
+  const labels=enemyStatusLabels(enemy);if(labels.length){const effects=document.createElement('small');effects.className='enemy-effects';effects.textContent=labels.join(' · ');effects.title=effects.textContent;button.appendChild(effects)}
+  button.addEventListener('click',()=>{if(b.busy||state.battle!==b)return;state.target=i;battleSfx('menu');renderTargets()});panel.appendChild(button);
+ });positionEnemyCards(panel)
+};
+if(typeof ResizeObserver!=='undefined'){const enemyCardResize=new ResizeObserver(()=>{const panel=$('enemy-targets');if(panel&&state.battle&&state.mode==='battle')positionEnemyCards(panel)});enemyCardResize.observe(document.querySelector('canvas'));enemyCardResize.observe($('viewport'))}
+const battleStatsPrevious={updateStats,beginPartyRound,partyEnemyPhase,startGame,developmentJump,applyLanguage};
+updateStats=function(){battleStatsPrevious.updateStats();if(state.battle&&!state.battle.kind)renderTargets();if(state.battle?.enemyActing)document.querySelectorAll('.party-card.active').forEach(card=>card.classList.remove('active'))};
+beginPartyRound=function(){if(state.battle)state.battle.enemyActing=false;battleStatsPrevious.beginPartyRound()};
+partyEnemyPhase=function(index){if(state.battle)state.battle.enemyActing=true;battleStatsPrevious.partyEnemyPhase(index);if(state.battle?.enemyActing)document.querySelectorAll('.party-card.active').forEach(card=>card.classList.remove('active'))};
+startGame=async function(){knownEnemies.clear();testKnownEnemies.clear();try{localStorage.removeItem(ENEMY_KNOWLEDGE_KEY)}catch(_){}await battleStatsPrevious.startGame()};
+developmentJump=function(stage){testKnownEnemies.clear();battleStatsPrevious.developmentJump(stage)};
+
+// Essential statistics, optional equipment/skills, and a shared medicine bag.
+function statsEscape(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function statsRemedyTargets(item,index=state.statsTarget||0){return item.all?state.party:[state.party[index]].filter(Boolean)}
+function canUseStatsRemedy(id){
+ const item=REMEDIES[id];if(!item||remedyCount(id)<=0)return false;
+ return statsRemedyTargets(item).some(h=>(item.resource==='hp'||h.hp>0)&&h[item.resource]<heroStats(h)[item.resource]);
+}
+function renderPartyStats(message=''){
+ ensureEquipment();ensureInventory();state.statsTarget=Math.max(0,Math.min(state.party.length-1,state.statsTarget||0));
+ const labels=[['hp','HP','الصحة'],['ap','Mana','المانا'],['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']];
+ const sheets=state.party.map(h=>{
+  const stats=heroStats(h),values={...stats,hp:h.hp+' / '+stats.hp,ap:h.ap+' / '+stats.ap};
+  const equipment=Object.entries(SLOT_LABELS).map(([slot,[en,ar]])=>{const g=GEAR[h.equipment?.[slot]];return '<li>'+statsEscape(tr(en,ar))+': '+statsEscape(g?tr(g.en,g.ar):tr('None','لا يوجد'))+'</li>'}).join('');
+  const skills=heroSkillEntries(h).filter(([,s])=>h.level>=s.level).map(([,s])=>'<li title="'+statsEscape(skillDescription(s))+'">'+statsEscape(tr(s.en,s.ar))+' <span dir="ltr">· '+s.cost+' MP</span></li>').join('');
+  return '<section class="stats-sheet"><h3 dir="ltr">'+statsEscape(h.name)+' <small>LV '+h.level+'</small></h3><p class="stats-exp">'+tr('EXP','الخبرة')+' <span dir="ltr">'+h.xp+' / '+h.level*20+'</span></p><dl>'+labels.map(([id,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+values[id]+'</dd>').join('')+'</dl><details class="stats-fold"><summary>'+tr('Equipment','التجهيزات')+'</summary><ul>'+equipment+'</ul></details><details class="stats-fold"><summary>'+tr('Skills','المهارات')+'</summary><ul>'+(skills||'<li>'+tr('No skills learned yet.','لم تُكتسب مهارات بعد.')+'</li>')+'</ul></details></section>';
+ }).join('');
+ $('stats-title').textContent=tr('Party & items','الفريق والأغراض');$('stats-close').textContent=tr('Close','إغلاق');
+ $('stats-content').innerHTML='<div class="team-wallet">'+tr('Party gold','ذهب الفريق')+': <strong>'+state.gold+'</strong></div><div class="stats-grid">'+sheets+'</div><section class="stats-medicine"><h3>'+tr('Medicine bag','حقيبة الأدوية')+'</h3><label for="stats-remedy-target">'+tr('Use on','استخدم على')+'</label> <select id="stats-remedy-target">'+state.party.map((h,i)=>'<option value="'+i+'"'+(i===state.statsTarget?' selected':'')+'>'+statsEscape(h.name)+'</option>').join('')+'</select><div id="stats-remedy-list"></div><p id="stats-remedy-message" role="status"></p>'+(state.statsReturn==='battle'?'<p class="stats-item-note">'+tr('Using an item consumes the acting companion’s turn.','استخدام غرض يستهلك دور الرفيق الذي يلعب الآن.')+'</p>':'')+'</section>';
+ const select=$('stats-remedy-target');select.addEventListener('change',()=>{state.statsTarget=Number(select.value);renderStatsRemedyList()});
+ $('stats-remedy-message').textContent=message;renderStatsRemedyList();
+}
+function renderStatsRemedyList(){
+ const list=$('stats-remedy-list');list.replaceChildren();
+ Object.entries(REMEDIES).filter(([id])=>['herb','blue'].includes(id)||remedyCount(id)>0).forEach(([id,item])=>{
+  const button=document.createElement('button');button.type='button';button.className='stats-remedy';button.dataset.item=id;button.disabled=!canUseStatsRemedy(id);
+  const name=document.createElement('strong');name.textContent=tr(item.en,item.ar)+' ×'+remedyCount(id);button.appendChild(name);
+  const effect=document.createElement('span');effect.textContent='+'+item.heal+' '+tr(item.resource==='hp'?'HP':'MP',item.resource==='hp'?'صحة':'مانا')+(item.all?tr(' · All companions',' · كل الرفاق'):'');button.appendChild(effect);
+  button.addEventListener('click',()=>useStatsRemedy(id));list.appendChild(button);
+ })
+}
+function useStatsRemedy(id){
+ if(state.mode!=='stats'||!canUseStatsRemedy(id))return false;
+ const inBattle=state.statsReturn==='battle',b=state.battle;if(inBattle&&(!b?.kind||b.busy))return false;
+ const item=REMEDIES[id],targets=statsRemedyTargets(item).filter(h=>item.resource==='hp'||h.hp>0);
+ const recovered=targets.map(h=>{const before=h[item.resource];h[item.resource]=Math.min(heroStats(h)[item.resource],before+item.heal);return h.name+' +'+(h[item.resource]-before)+' '+tr(item.resource==='hp'?'HP':'MP',item.resource==='hp'?'صحة':'مانا')});
+ setRemedyCount(id,remedyCount(id)-1);battleSfx('shield');const message=tr(item.en,item.ar)+' · '+recovered.join(' · ');
+ if(inBattle){$('stats-screen').classList.add('hidden');state.mode='battle';state.battleMenu='main';b.keyboardTarget=null;b.busy=true;setBattleMessage(message);renderCommands();updateStats();battleDelay(afterHeroAction,800)}
+ else renderPartyStats(message);
+ return true;
+}
+showStats=function(){
+ if(!['map','battle','end'].includes(state.mode)||(state.mode==='battle'&&(!state.battle?.kind||state.battle.busy)))return;
+ if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;renderPartyStats();$('stats-screen').classList.remove('hidden');
+};
+applyLanguage=function(){battleStatsPrevious.applyLanguage();if(state.mode==='stats')renderPartyStats()};
 
 $('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
 })();
