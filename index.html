@@ -203,7 +203,7 @@
 </head>
 <body>
 <main id="game">
-  <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Music volume</h2><button id="music-settings-close" type="button" aria-label="Close music settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute music</button></section>
+  <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Game volume</h2><button id="music-settings-close" type="button" aria-label="Close sound settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute sound</button></section>
 
   <header id="topbar"><button id="dev-button" class="dev-corner" type="button" aria-label="Development tools">⚙</button><div id="objective">PROTOTYPE · CHAPTER I</div><div class="top-actions"><button id="stats-button" class="small-button" type="button">Stats</button><button id="music-toggle" class="small-button" type="button" aria-controls="music-panel" aria-expanded="false">Music: On</button><button id="restart" class="small-button" type="button">Restart</button><button id="fullscreen" class="small-button" type="button">Fullscreen</button></div></header>
   <section id="viewport" aria-label="Top-down fantasy role-playing game">
@@ -325,9 +325,9 @@ const AR_TEXT={
 };
 function tr(en,ar){return state.lang==='ar'?ar:en}function setObjective(key){ui.objective.textContent=I18N[state.lang][key]}
 
-const audio={ctx:null,musicGain:null,sfxGain:null,compressor:null,timer:null,on:true,mode:'village',step:0,generation:0};
-function initAudio(){if(audio.ctx)return audio.ctx;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audio.ctx=new AC({latencyHint:'interactive'});audio.musicGain=audio.ctx.createGain();audio.sfxGain=audio.ctx.createGain();audio.compressor=audio.ctx.createDynamicsCompressor();audio.musicGain.gain.value=1.35;audio.sfxGain.gain.value=1.3;audio.compressor.threshold.value=-12;audio.compressor.knee.value=16;audio.compressor.ratio.value=4;audio.compressor.attack.value=.003;audio.compressor.release.value=.22;audio.musicGain.connect(audio.compressor);audio.sfxGain.connect(audio.compressor);audio.compressor.connect(audio.ctx.destination);return audio.ctx}
-async function unlockAudio(){const context=initAudio();if(!context)return false;try{if(context.state!=='running')await context.resume();if(context.state==='running'){const buffer=context.createBuffer(1,1,context.sampleRate),source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination);source.start(0);return true}}catch(_){return false}return false}
+const audio={ctx:null,musicGain:null,sfxGain:null,masterGain:null,compressor:null,timer:null,on:true,mode:'village',step:0,generation:0};
+function initAudio(){if(audio.ctx)return audio.ctx;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audio.ctx=new AC({latencyHint:'interactive'});audio.musicGain=audio.ctx.createGain();audio.sfxGain=audio.ctx.createGain();audio.masterGain=audio.ctx.createGain();audio.compressor=audio.ctx.createDynamicsCompressor();audio.musicGain.gain.value=1.35;audio.sfxGain.gain.value=1.3;audio.compressor.threshold.value=-12;audio.compressor.knee.value=16;audio.compressor.ratio.value=4;audio.compressor.attack.value=.003;audio.compressor.release.value=.22;audio.musicGain.connect(audio.compressor);audio.sfxGain.connect(audio.compressor);audio.compressor.connect(audio.masterGain);audio.masterGain.connect(audio.ctx.destination);return audio.ctx}
+async function unlockAudio(){const context=initAudio();if(!context)return false;try{if(context.state!=='running')await context.resume();if(context.state==='running'){const buffer=context.createBuffer(1,1,context.sampleRate),source=context.createBufferSource();source.buffer=buffer;source.connect(audio.masterGain);source.start(0);return true}}catch(_){return false}return false}
 function tone(freq,duration,type,volume,destination,delay=0){if(!audio.ctx||!destination)return;const tempo=destination===audio.musicGain?musicTempoRate:1;duration/=tempo;delay/=tempo;const now=audio.ctx.currentTime+delay,o=audio.ctx.createOscillator(),g=audio.ctx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),now+.015);g.gain.exponentialRampToValueAtTime(.0001,now+duration);o.connect(g);g.connect(destination);o.start(now);o.stop(now+duration+.03)}
 function musicStep(){if(!audio.on||!audio.ctx||audio.ctx.state!=='running')return;const village=[220,277.18,329.63,277.18,246.94,293.66,369.99,293.66],tension=[110,123.47,116.54,146.83,110,138.59,123.47,103.83],battle=[146.83,174.61,196,174.61,146.83,220,196,174.61],notes=audio.mode==='battle'?battle:audio.mode==='tension'?tension:village,i=audio.step++%notes.length,type=audio.mode==='battle'?'square':audio.mode==='tension'?'sawtooth':'triangle',duration=audio.mode==='battle'?.2:audio.mode==='tension'?.3:.42,volume=audio.mode==='battle'?.28:audio.mode==='tension'?.22:.24;tone(notes[i],duration,type,volume,audio.musicGain);if(audio.mode==='village'&&i%4===0)tone(notes[i]/2,.7,'sine',.12,audio.musicGain);if(audio.mode==='tension'&&i%2===0)tone(notes[i]/2,.5,'square',.1,audio.musicGain);if(audio.mode==='battle'&&i%2===0)tone(notes[i]/2,.24,'sawtooth',.15,audio.musicGain)}
 async function startMusic(mode){audio.mode=mode;audio.step=0;audio.generation++;const generation=audio.generation;if(audio.timer)clearInterval(audio.timer);audio.timer=null;if(!audio.on)return;const ready=await unlockAudio();if(!ready||generation!==audio.generation||!audio.on)return;musicStep();const interval=mode==='battle'?230:mode==='tension'?340:470;audio.timer=setInterval(musicStep,interval/musicTempoRate)}function stopMusic(){audio.generation++;if(audio.timer)clearInterval(audio.timer);audio.timer=null}
@@ -1828,7 +1828,7 @@ window.addEventListener?.('blur',()=>{actionPresses.clear();lastActionPress=null
 })();
 
 
-// A music-only master level, shared by synthesized and recorded soundtracks.
+// One master level for all music and effects, including dialogue and the legion shout.
 const MUSIC_SETTINGS_KEY='fractured_music_preferences_v1';
 let musicVolume=100;
 try{
@@ -1838,23 +1838,23 @@ try{
 }catch(_){}
 function saveMusicSettings(){try{localStorage.setItem(MUSIC_SETTINGS_KEY,JSON.stringify({volume:musicVolume,muted:!audio.on}))}catch(_){}}
 function syncMusicVolume(){
- const gain=audio.musicGain?.gain;if(!gain)return;
- const level=audio.on?1.35*musicVolume/100:0;
+ const gain=audio.masterGain?.gain;if(!gain)return;
+ const level=audio.on?musicVolume/100:0;
  gain.cancelScheduledValues?.(audio.ctx.currentTime);
  if(gain.setTargetAtTime)gain.setTargetAtTime(level,audio.ctx.currentTime,.035);
  else gain.value=level;
 }
 function renderMusicSettings(){
- $('music-toggle').textContent=audio.on?tr('Music: '+Math.round(musicVolume)+'%','الموسيقى: '+Math.round(musicVolume)+'٪'):tr('Music: Muted','الموسيقى: مكتومة');
- $('music-toggle').title=tr('Adjust music volume','ضبط صوت الموسيقى');
- $('music-settings-title').textContent=tr('Music volume','صوت الموسيقى');
+ $('music-toggle').textContent=audio.on?tr('Sound: '+Math.round(musicVolume)+'%','الصوت: '+Math.round(musicVolume)+'٪'):tr('Sound: Muted','الصوت: مكتوم');
+ $('music-toggle').title=tr('Adjust game volume','ضبط صوت اللعبة');
+ $('music-settings-title').textContent=tr('Game volume','صوت اللعبة');
  $('music-volume-label').textContent=tr('Volume','مستوى الصوت');
  $('music-volume-value').textContent=Math.round(musicVolume)+tr('%','٪');
  $('music-volume').value=String(musicVolume);
  $('music-volume').setAttribute?.('aria-valuetext',Math.round(musicVolume)+tr(' percent',' بالمئة'));
- $('music-mute').textContent=audio.on?tr('Mute music','كتم الموسيقى'):tr('Unmute music','تشغيل الموسيقى');
+ $('music-mute').textContent=audio.on?tr('Mute sound','كتم الصوت'):tr('Unmute sound','تشغيل الصوت');
  $('music-mute').setAttribute?.('aria-pressed',String(!audio.on));
- $('music-settings-close').setAttribute?.('aria-label',tr('Close music settings','إغلاق إعدادات الموسيقى'));
+ $('music-settings-close').setAttribute?.('aria-label',tr('Close sound settings','إغلاق إعدادات الصوت'));
 }
 function setMusicVolume(value){
  const number=Number(value);if(!Number.isFinite(number))return;
