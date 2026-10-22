@@ -1,0 +1,13 @@
+/* Game volume panel. */
+#game{position:relative}
+    #music-panel{position:absolute;right:10px;top:58px;width:min(300px,calc(100% - 20px));z-index:30;padding:16px;border:2px solid #bda365;border-radius:5px;background:#101a31;box-shadow:0 6px 25px #000b;font-family:Arial,Tahoma,sans-serif;font-size:16px}
+    [dir=rtl] #music-panel{right:auto;left:10px}
+    .music-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}
+    #music-settings-title{margin:0;color:#f4d995;font-size:18px}
+    #music-settings-close{width:32px;min-height:32px;padding:0;border:1px solid #67799f;background:#18253e;color:#f4eedb;font:22px Arial;cursor:pointer}
+    .music-volume-row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    #music-volume-value{color:#f4d995;direction:ltr;font-weight:700}
+    #music-volume{display:block;width:100%;min-height:42px;margin:8px 0;accent-color:#e8c56e;direction:ltr;touch-action:none;cursor:pointer}
+    #music-mute{width:100%;min-height:40px;padding:8px;border:1px solid #887e65;background:#23324c;color:#fff2cf;font:700 16px Arial,Tahoma,sans-serif;cursor:pointer}
+    #music-panel button:focus-visible,#music-volume:focus-visible{outline:2px solid #ffe19c;outline-offset:3px}
+    #music-panel button{touch-action:manipulation}
