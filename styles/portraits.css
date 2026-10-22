@@ -1,0 +1,30 @@
+/* User-provided portraits shared by battle cards, party overview and bag targets. */
+#game .battle-portrait.portrait-astro,
+#game #stats-screen .party-face.portrait-astro{
+ background-image:url('../assets/portraits/astro.png')
+}
+#game .battle-portrait.portrait-shadow,
+#game .battle-portrait.shadow-portrait,
+#game #stats-screen .party-face.portrait-shadow{
+ background-image:url('../assets/portraits/shadow.png')
+}
+#game .battle-portrait.portrait-astro,
+#game .battle-portrait.portrait-shadow,
+#game .battle-portrait.shadow-portrait,
+#game #stats-screen .party-face.portrait-astro,
+#game #stats-screen .party-face.portrait-shadow{
+ background-color:#101b2d;background-size:cover;background-position:center;background-repeat:no-repeat;
+ image-rendering:pixelated;filter:none
+}
+#game .battle-portrait.portrait-astro::before,
+#game .battle-portrait.portrait-astro::after,
+#game .battle-portrait.portrait-shadow::before,
+#game .battle-portrait.portrait-shadow::after,
+#game .battle-portrait.shadow-portrait::before,
+#game .battle-portrait.shadow-portrait::after,
+#game #stats-screen .party-face.portrait-astro::before,
+#game #stats-screen .party-face.portrait-astro::after,
+#game #stats-screen .party-face.portrait-shadow::before,
+#game #stats-screen .party-face.portrait-shadow::after{
+ content:none;display:none
+}
