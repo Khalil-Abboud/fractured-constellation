@@ -14,6 +14,7 @@
     .enemy-card-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-bottom:4px;font:inherit}
     .enemy-hp-track{position:relative;height:clamp(17px,calc(14 * var(--ui-unit)),28px);overflow:hidden;border:1px solid #908361;background:#341b21;direction:ltr}
     .enemy-hp-fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(#a6cb65,#4d8e44);transition:width .15s}
+.enemy-hp-fill.unknown{width:100%!important;transition:none}
     .enemy-hp-value{position:absolute;inset:0;display:grid;place-items:center;font:700 clamp(10px,calc(10 * var(--ui-unit)),18px)/1 Arial,Tahoma,sans-serif;color:#fff;text-shadow:0 1px 2px #000,1px 0 2px #000}
     #enemy-targets.floating-enemies .enemy-effects{font-size:.8em!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
     #battle-message,#game.desktop-ui #battle-message{left:auto;right:8px;max-width:44%}
@@ -27,7 +28,11 @@
     #stats-remedy-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
     .stats-remedy{display:grid;gap:5px;min-height:64px;padding:10px;border:1px solid #718caa;background:#182d43;color:#fff0cc;text-align:start;font:inherit;cursor:pointer;touch-action:manipulation}.stats-remedy strong{font-size:.85em}.stats-remedy span{font-size:.8em;color:#cce0bd}.stats-remedy:disabled{opacity:.4;cursor:default}
     #stats-remedy-message{min-height:1.5em;color:#d9e7ad;font-size:.85em}.stats-item-note{font-size:.8em;color:#c2cbe0}
+.stats-fold li[data-skill]{position:relative;cursor:help;border-radius:3px;padding:2px 4px}.stats-fold li[data-skill]:hover,.stats-fold li[data-skill]:focus{outline:1px solid #d9bb69;background:#243552;color:#fff1b8}
+#skill-tooltip{position:absolute;z-index:45;left:50%;bottom:clamp(102px,18%,150px);transform:translateX(-50%);width:min(520px,calc(100% - 24px));padding:9px 12px;border:2px solid #e0bd58;border-radius:4px;background:#081124f2;color:#fff0c3;box-shadow:0 5px 18px #000b;text-align:center;font:700 clamp(11px,1.7vw,15px)/1.5 Arial,Tahoma,sans-serif;pointer-events:none}
+[dir=rtl] #skill-tooltip{direction:rtl}
     @media(max-width:650px){.party-card .battle-portrait{width:30px;height:30px}.party-card .battle-portrait::before{top:13px}.party-card .battle-portrait::after{bottom:4px}#command-window,#command-window.spells-open,#command-window.skill-grid,#command-window.items-open{left:70%}#command-window.spells-open,#command-window.skill-grid,#command-window.items-open{width:55%}#stats-remedy-list{grid-template-columns:1fr 1fr}.stats-remedy{font-size:13px;padding:8px}#battle-message{max-width:55%;font-size:11px}}
 
 
     @media(max-width:650px){#enemy-targets.floating-enemies .enemy-target{width:74px;padding:2px 4px;font-size:8px;line-height:1.2}.enemy-card-name{margin-bottom:2px}.enemy-hp-track{height:12px}.enemy-hp-value{font-size:9px}}
+

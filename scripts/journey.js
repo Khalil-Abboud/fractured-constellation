@@ -57,7 +57,7 @@ function battleCommandList(){
 renderCommands=function(){
  const b=state.battle,list=battleCommandList(),submenu=state.battleMenu!=='main';ui.commands.classList.toggle('magic-menu',submenu);ui.commands.classList.toggle('item-menu',state.battleMenu==='item');$('command-window').classList.toggle('spells-open',submenu);$('command-window').classList.toggle('items-open',state.battleMenu==='item');$('command-window').classList.toggle('skill-grid',state.battleMenu==='magic');ui.commands.replaceChildren();
  list.forEach(([label,action,ar],i)=>{const button=document.createElement('button');button.type='button';button.className='command'+(i===state.selected?' selected':'');button.textContent=tr(label,ar);button.dataset.action=action;
- const hero=b.kind?activeHero():state.party[0],noSkill=(action==='magic'&&knownSpells(hero).length<=1)||(action==='special'&&hero.name!=='Astro'),skill=SKILLS[action];if(skill)button.title=skillDescription(skill);button.disabled=b.busy||noSkill||(skill&&hero.ap<skill.cost)||(action==='herb'&&state.herbs===0)||(REMEDIES[action]&&remedyCount(action)===0);button.addEventListener('click',()=>chooseCommand(action));ui.commands.appendChild(button)});
+ const hero=b.kind?activeHero():state.party[0],noSkill=(action==='magic'&&knownSpells(hero).length<=1)||(action==='special'&&hero.name!=='Astro'),skill=SKILLS[action];if(skill)button.title=skillDescription(skill);button.disabled=b.busy||noSkill||(action==='herb'&&state.herbs===0)||(REMEDIES[action]&&remedyCount(action)===0);button.addEventListener('click',()=>chooseCommand(action));ui.commands.appendChild(button)});
  if(b.kind)renderTargets();
 };
 function battleCard(p,stats,active,raid=false){
@@ -144,3 +144,4 @@ function renderScoutShop(message=''){$('shop-title').textContent=tr('Scout · Su
 function buyHerb(){if(state.mode!=='shop')return;if(state.gold<HERB_PRICE){renderScoutShop(tr('Not enough gold.','لا يوجد ذهب كافٍ.'));return}state.gold-=HERB_PRICE;state.herbs++;battleSfx('menu');renderScoutShop(tr('One healing herb purchased.','تم شراء عشب شفاء واحد.'))}
 function closeScoutShop(){$('shop-screen').classList.add('hidden');if(state.mode==='shop')returnToJourney()}
 $('buy-herb').addEventListener('click',buyHerb);$('shop-close').addEventListener('click',closeScoutShop);
+

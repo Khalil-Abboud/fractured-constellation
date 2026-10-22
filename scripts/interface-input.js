@@ -12,6 +12,12 @@ function prepareEnemyKnowledge(b){
  enemies.forEach(e=>known.add(enemyKnowledgeKey(e)));
  if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
 }
+function revealEnemyHealth(enemy,index,b=state.battle){
+ if(!b)return false;prepareEnemyKnowledge(b);b.healthKnowledge[index]=true;
+ const known=state.devTesting?testKnownEnemies:knownEnemies;known.add(enemyKnowledgeKey(enemy));
+ if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
+ return true
+}
 function enemyStatusLabels(e){
  const labels=[];
  if(e.poison?.turns>0)labels.push(tr('Poison '+e.poison.turns,'سم '+e.poison.turns));
@@ -43,7 +49,7 @@ renderTargets=function(){
   button.style.left=(pos[0]/512*100)+'%';button.style.top=((pos[1]-(b.kind?50:62))/288*100)+'%';
   const name=document.createElement('strong');name.className='enemy-card-name';name.textContent=tr(enemy.name,enemy.ar);button.appendChild(name);
   const meter=document.createElement('div');meter.className='enemy-hp-track';
-  const fill=document.createElement('span');fill.className='enemy-hp-fill';fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHP*100))+'%';meter.appendChild(fill);
+  const fill=document.createElement('span');fill.className='enemy-hp-fill';fill.style.width=(known?Math.max(0,Math.min(100,enemy.hp/enemy.maxHP*100)):100)+'%';fill.classList.toggle('unknown',!known);meter.appendChild(fill);
   const value=document.createElement('span');value.className='enemy-hp-value';value.textContent=known?Math.max(0,enemy.hp)+' / '+enemy.maxHP:'?';meter.appendChild(value);button.appendChild(meter);
   button.title=tr(enemy.name,enemy.ar)+' · '+(known?tr('Health','الصحة')+' '+value.textContent:tr('First encounter · health unknown','المواجهة الأولى · الصحة مجهولة'));
   button.setAttribute?.('aria-label',button.title);
@@ -59,6 +65,16 @@ partyEnemyPhase=function(index){if(state.battle)state.battle.enemyActing=true;ba
 startGame=async function(){knownEnemies.clear();testKnownEnemies.clear();try{localStorage.removeItem(ENEMY_KNOWLEDGE_KEY)}catch(_){}await battleStatsPrevious.startGame()};
 developmentJump=function(stage){testKnownEnemies.clear();battleStatsPrevious.developmentJump(stage)};
 
+// Skill help is available in battle and in the compact statistics list.
+const skillTooltipRenderPrevious=renderCommands;
+function skillTooltip(){let tip=$('skill-tooltip');if(!tip){tip=document.createElement('div');tip.id='skill-tooltip';tip.className='hidden';tip.setAttribute('role','tooltip');$('game').appendChild(tip)}return tip}
+function hideSkillTooltip(){skillTooltip().classList.add('hidden')}
+function showSkillTooltip(element){const s=SKILLS[element.dataset.skill];if(!s)return;const tip=skillTooltip();tip.textContent=tr(s.en,s.ar)+' — '+skillDescription(s);tip.classList.remove('hidden')}
+function bindSkillTooltips(root){
+ root.querySelectorAll?.('[data-skill]').forEach(element=>{const s=SKILLS[element.dataset.skill];if(!s)return;element.title=skillDescription(s);element.setAttribute?.('aria-describedby','skill-tooltip');element.addEventListener('mouseenter',()=>showSkillTooltip(element));element.addEventListener('mouseleave',hideSkillTooltip);element.addEventListener('focus',()=>showSkillTooltip(element));element.addEventListener('blur',hideSkillTooltip)})
+}
+renderCommands=function(){hideSkillTooltip();skillTooltipRenderPrevious();Array.from(ui.commands.children).forEach(button=>{if(SKILLS[button.dataset.action])button.dataset.skill=button.dataset.action});bindSkillTooltips(ui.commands)};
+
 // Essential statistics, optional equipment/skills, and a shared medicine bag.
 function statsEscape(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function statsRemedyTargets(item,index=state.statsTarget||0){return item.all?state.party:[state.party[index]].filter(Boolean)}
@@ -72,13 +88,13 @@ function renderPartyStats(message=''){
  const sheets=state.party.map(h=>{
   const stats=heroStats(h),values={...stats,hp:h.hp+' / '+stats.hp,ap:h.ap+' / '+stats.ap};
   const equipment=Object.entries(SLOT_LABELS).map(([slot,[en,ar]])=>{const g=GEAR[h.equipment?.[slot]];return '<li>'+statsEscape(tr(en,ar))+': '+statsEscape(g?tr(g.en,g.ar):tr('None','لا يوجد'))+'</li>'}).join('');
-  const skills=heroSkillEntries(h).filter(([,s])=>h.level>=s.level).map(([,s])=>'<li title="'+statsEscape(skillDescription(s))+'">'+statsEscape(tr(s.en,s.ar))+' <span dir="ltr">· '+s.cost+' MP</span></li>').join('');
+  const skills=heroSkillEntries(h).filter(([,s])=>h.level>=s.level).map(([id,s])=>'<li tabindex="0" data-skill="'+id+'">'+statsEscape(tr(s.en,s.ar))+' <span dir="ltr">· '+s.cost+' MP</span></li>').join('');
   return '<section class="stats-sheet"><h3 dir="ltr">'+statsEscape(h.name)+' <small>LV '+h.level+'</small></h3><p class="stats-exp">'+tr('EXP','الخبرة')+' <span dir="ltr">'+h.xp+' / '+h.level*20+'</span></p><dl>'+labels.map(([id,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+values[id]+'</dd>').join('')+'</dl><details class="stats-fold"><summary>'+tr('Equipment','التجهيزات')+'</summary><ul>'+equipment+'</ul></details><details class="stats-fold"><summary>'+tr('Skills','المهارات')+'</summary><ul>'+(skills||'<li>'+tr('No skills learned yet.','لم تُكتسب مهارات بعد.')+'</li>')+'</ul></details></section>';
  }).join('');
  $('stats-title').textContent=tr('Party & items','الفريق والأغراض');$('stats-close').textContent=tr('Close','إغلاق');
  $('stats-content').innerHTML='<div class="team-wallet">'+tr('Party gold','ذهب الفريق')+': <strong>'+state.gold+'</strong></div><div class="stats-grid">'+sheets+'</div><section class="stats-medicine"><h3>'+tr('Medicine bag','حقيبة الأدوية')+'</h3><label for="stats-remedy-target">'+tr('Use on','استخدم على')+'</label> <select id="stats-remedy-target">'+state.party.map((h,i)=>'<option value="'+i+'"'+(i===state.statsTarget?' selected':'')+'>'+statsEscape(h.name)+'</option>').join('')+'</select><div id="stats-remedy-list"></div><p id="stats-remedy-message" role="status"></p>'+(state.statsReturn==='battle'?'<p class="stats-item-note">'+tr('Using an item consumes the acting companion’s turn.','استخدام غرض يستهلك دور الرفيق الذي يلعب الآن.')+'</p>':'')+'</section>';
  const select=$('stats-remedy-target');select.addEventListener('change',()=>{state.statsTarget=Number(select.value);renderStatsRemedyList()});
- $('stats-remedy-message').textContent=message;renderStatsRemedyList();
+ $('stats-remedy-message').textContent=message;renderStatsRemedyList();bindSkillTooltips($('stats-content'));
 }
 function renderStatsRemedyList(){
  const list=$('stats-remedy-list');list.replaceChildren();
@@ -106,3 +122,4 @@ showStats=function(){
 applyLanguage=function(){battleStatsPrevious.applyLanguage();if(state.mode==='stats')renderPartyStats()};
 
 $('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
+

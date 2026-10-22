@@ -46,8 +46,8 @@
     #game.desktop-ui #prompt{font-size:clamp(15px,calc(12 * var(--ui-unit)),22px)}
     #game.desktop-ui .stats-wrap{width:min(92%,calc(700 * var(--ui-unit)));font-size:clamp(16px,calc(14 * var(--ui-unit)),24px)}
     #game.desktop-ui .stats-wrap h2{font-size:clamp(22px,calc(20 * var(--ui-unit)),32px)}
-    #game.desktop-ui .stats-sheet dl,#game.desktop-ui .market-row,#game.desktop-ui .stats-tip,#game.desktop-ui .equipment-lines,#game.desktop-ui .skill-reference-row small{font-size:clamp(16px,calc(13 * var(--ui-unit)),23px)}
-    #game.desktop-ui .skill-reference-row strong{font-size:clamp(17px,calc(14 * var(--ui-unit)),24px)}
+    #game.desktop-ui .stats-sheet dl,#game.desktop-ui .market-row,#game.desktop-ui .stats-tip,#game.desktop-ui .equipment-lines{font-size:clamp(16px,calc(13 * var(--ui-unit)),23px)}
     #game.desktop-ui .market-row small{font-size:.9em;line-height:1.5}
     @media(max-width:650px){#game{width:100%}}
     @media(max-height:570px) and (orientation:landscape){#game{width:100%}}
+

@@ -3,9 +3,7 @@
     #command-window.skill-grid .command{min-height:32px;font-size:.62rem;line-height:1.35;padding:4px 2px;white-space:normal;overflow-wrap:normal}
     #command-window.skill-grid{padding-top:30px;top:68px}
     .enemy-effects{color:#bce89c!important;font-size:.54rem!important;line-height:1.35}
-    .skill-reference{margin-top:12px;border-top:1px solid #8e7848;padding-top:5px}.skill-reference h4{margin:5px 0;color:#ffe39e;font-size:.85rem}
-    .skill-reference-row{padding:6px 0;border-bottom:1px solid #605337}.skill-reference-row strong,.skill-reference-row small{display:block;line-height:1.5}.skill-reference-row strong{font-size:.78rem;color:#efdcaf}.skill-reference-row small{font-size:.72rem;color:#c4c4bd}.skill-reference-row.locked{opacity:.6}
-    @media(max-width:650px){#command-window.skill-grid .command{font-size:.57rem;padding:3px 1px}.skill-reference-row small{font-size:.68rem}}
+    @media(max-width:650px){#command-window.skill-grid .command{font-size:.57rem;padding:3px 1px}}
 
     #game-buttons{pointer-events:none;z-index:9}#game-buttons button{position:absolute;width:78px;height:78px;border:3px solid #e1c16c;border-radius:50%;background:linear-gradient(#72523cec,#35293aee);color:#fff0c3;font-size:1.3rem;font-weight:900;box-shadow:0 4px 9px #0008;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;user-select:none}
     #game-buttons #action-button{right:14px;bottom:61px}#game-buttons #back-button{right:104px;bottom:18px;background:linear-gradient(#3d5576ed,#202d48ed)}#game-buttons #back-button.held{background:#ae8647;border-color:#fff1ab;transform:scale(.96)}
@@ -39,3 +37,4 @@
     .party-card .battle-portrait::before{top:34px;left:7px;right:7px}.party-card .portrait-astro::before{height:8px;background:linear-gradient(90deg,#252a46 0 40%,#909eca 41% 56%,#252a46 57%);border:1px solid #a7bde5}.party-card .battle-portrait::after{left:13px;bottom:12px}
     #end-credit{margin:15px auto 20px;padding-top:12px;border-top:1px solid #9a854e;color:#f2deb0;font:600 clamp(.85rem,2vw,1rem) Arial,Tahoma,sans-serif;line-height:1.8}#end-credit span{display:block}
     @media(max-width:650px){#status-window,#status-window.party-status{gap:4px;height:83px}.party-card{grid-template-columns:30px minmax(0,1fr);gap:4px;padding:4px;border-width:2px}.party-card .battle-portrait{width:30px;height:71px}.party-card .card-heading{font-size:10px;flex-wrap:wrap;gap:0;margin-bottom:3px}.party-card .card-heading small{font-size:8px}.party-card .mini-row{font-size:9px}.party-card .meter{height:7px;margin:2px 0 4px}.party-card .battle-portrait::before{left:3px;right:3px}.party-card .battle-portrait::after{left:7px;width:10px}}
+
