@@ -29,6 +29,7 @@
     #game.desktop-ui .enemy-target small{font-size:calc(12 * var(--ui-unit));line-height:1.4}
     #game.desktop-ui .enemy-effects{font-size:calc(11 * var(--ui-unit))!important}
     #game.desktop-ui #status-window,#game.desktop-ui #status-window.party-status{width:min(calc(690 * var(--ui-unit)),96%);height:calc(110 * var(--ui-unit));bottom:calc(9 * var(--ui-unit));gap:calc(7 * var(--ui-unit))}
+    #game.desktop-ui #status-window:has(.party-card:nth-child(4)){width:min(calc(900 * var(--ui-unit)),96%)}
     #game.desktop-ui .party-card{max-width:calc(224 * var(--ui-unit));grid-template-columns:calc(56 * var(--ui-unit)) minmax(0,1fr);gap:calc(7 * var(--ui-unit));padding:calc(6 * var(--ui-unit));border-width:calc(2 * var(--ui-unit))}
     #game.desktop-ui .party-card .battle-portrait{width:calc(56 * var(--ui-unit));height:calc(94 * var(--ui-unit))}
     #game.desktop-ui .party-card .card-heading{font-size:calc(14 * var(--ui-unit));margin-bottom:calc(7 * var(--ui-unit))}
