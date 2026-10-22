@@ -180,5 +180,10 @@ ui.prompt.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.butto
 ui.prompt.addEventListener('click',activateContextPrompt);
 ui.prompt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){activateContextPrompt(e)}});
 
+
+// Keep the continue prompt consistent with the selected language and input controls.
+const pixelDialogueLanguagePrevious=applyLanguage;
+applyLanguage=function(){pixelDialogueLanguagePrevious();ui.continue.textContent=tr('CLICK / Z / ENTER','انقر أو اضغط Z / Enter')};
+
 $('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
 
