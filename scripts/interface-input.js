@@ -122,5 +122,48 @@ showStats=function(){
 };
 applyLanguage=function(){battleStatsPrevious.applyLanguage();if(state.mode==='stats')renderPartyStats()};
 
+
+// The exploration prompt is also a real mouse/touch button, anchored above the nearby person or door.
+const contextPromptPrevious=updatePrompt;
+function contextPromptAnchor(){
+ const p=state.player;if(!p)return null;
+ let anchor=p,nearest=Infinity;
+ const partyNames=new Set((state.party||[]).map(hero=>hero.name));
+ for(const actor of state.entities||[]){
+  if(actor===p||actor.visible===false||partyNames.has(actor.name))continue;
+  const distance=Math.hypot(actor.x-p.x,actor.y-p.y);
+  if(distance<48&&distance<nearest){anchor=actor;nearest=distance}
+ }
+ if(typeof currentPortal==='function'){
+  const portal=currentPortal();
+  if(portal){
+   const door=portal.door||{};
+   anchor={x:Number.isFinite(door.x)?door.x:portal.x+portal.w/2,y:Number.isFinite(door.y)?door.y:portal.y+portal.h}
+  }
+ }
+ return anchor
+}
+function syncContextPrompt(){
+ const prompt=ui.prompt,active=state.mode==='map'&&state.player&&!prompt.classList.contains('hidden');
+ prompt.classList.toggle('context-action',!!active);
+ if(!active){prompt.removeAttribute('role');prompt.removeAttribute('tabindex');return}
+ const anchor=contextPromptAnchor()||state.player;
+ const scrolling=['world','bellhaven','sacrifice'].includes(state.scene),camera=scrolling?(state.camera||{x:0,y:0}):{x:0,y:0};
+ const x=Math.max(68,Math.min(444,anchor.x-(camera.x||0)));
+ const y=Math.max(44,Math.min(266,anchor.y-(camera.y||0)-20));
+ prompt.style.left=x/512*100+'%';prompt.style.top=y/288*100+'%';
+ prompt.setAttribute('role','button');prompt.tabIndex=0;
+ const label=prompt.textContent.replace(/^A\s+/,'');
+ prompt.setAttribute('aria-label',tr('Activate: '+label,'تنفيذ: '+label))
+}
+updatePrompt=function(){contextPromptPrevious();syncContextPrompt()};
+function activateContextPrompt(e){
+ if(state.mode!=='map'||ui.prompt.classList.contains('hidden'))return;
+ e.preventDefault();e.stopPropagation();ui.prompt.classList.add('hidden');pressA()
+}
+ui.prompt.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button===0)e.stopPropagation()});
+ui.prompt.addEventListener('click',activateContextPrompt);
+ui.prompt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){activateContextPrompt(e)}});
+
 $('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
 

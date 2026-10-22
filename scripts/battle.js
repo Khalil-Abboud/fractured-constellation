@@ -272,10 +272,10 @@ const trainingDevPrevious=developmentJump;
 DEV_STAGES.find(group=>group.points.some(([id])=>id==='arena1')).points.splice(1,0,['trainingYard','Arena / training yard','المدرّج / ساحة التدريب']);
 developmentJump=function(stage){if(stage!=='trainingYard'){trainingDevPrevious(stage);return}trainingDevPrevious('arena1');setupTrainingYard();resumeChapterMap();startMusic('village')};
 
-// One input contract: arrows move, Z confirms, X cancels or sprints while held.
+// One input contract: arrows/WASD move, Z confirms, X cancels, and Left Shift sprints while held.
 const RUN_MULTIPLIER=1.9;
 let bButtonPointer=null,bButtonHeld=false;
-function sprinting(){return state.mode==='map'&&(bButtonHeld||state.keys.x)}
+function sprinting(){return state.mode==='map'&&(bButtonHeld||state.keys.x||state.keys.shift)}
 function pressA(){
  if(state.mode==='battle'&&state.battle?.auto){stopAutoBattle();return}
  if(state.mode==='battle'&&state.battle&&!state.battle.busy){
@@ -298,7 +298,7 @@ function pressB(){
  if(state.mode==='choice'&&!state.choiceLocked){const cancel=state.choiceOptions.findIndex(o=>['later','back'].includes(o.value));if(cancel>=0)resolveChoice(cancel)}
 }
 function clearBButton(){const id=bButtonPointer;bButtonPointer=null;bButtonHeld=false;$('back-button').classList.remove('held');if(id!==null)try{$('back-button').releasePointerCapture?.(id)}catch(_){}}
-function syncGameButtons(){const hidden=['title','end','cutscene','battle','battleBusy','dialogue','choice','devAuth'].includes(state.mode);$('game-buttons').classList.toggle('hidden',hidden);$('game-buttons').classList.toggle('raised-controls',['dialogue','choice'].includes(state.mode));$('game-buttons').classList.toggle('menu-controls',['stats','shop','market','dev','battle'].includes(state.mode));$('game-buttons').classList.toggle('battle-controls',state.mode==='battle');$('action-button').disabled=state.mode==='battle'&&!!state.battle?.busy;$('back-button').disabled=state.mode==='battle'&&!!state.battle?.busy;if(state.mode!=='map'){bButtonHeld=false;state.keys.x=false;$('back-button').classList.remove('held')}$('action-button').title=tr('A · Z · interact / confirm','A · Z · تفاعل / تأكيد');$('back-button').title=tr('B · X · hold to sprint / back','B · X · اضغط باستمرار للجري / رجوع')}
+function syncGameButtons(){const hidden=['title','end','cutscene','battle','battleBusy','dialogue','choice','devAuth'].includes(state.mode);$('game-buttons').classList.toggle('hidden',hidden);$('game-buttons').classList.toggle('raised-controls',['dialogue','choice'].includes(state.mode));$('game-buttons').classList.toggle('menu-controls',['stats','shop','market','dev','battle'].includes(state.mode));$('game-buttons').classList.toggle('battle-controls',state.mode==='battle');$('action-button').disabled=state.mode==='battle'&&!!state.battle?.busy;$('back-button').disabled=state.mode==='battle'&&!!state.battle?.busy;if(state.mode!=='map'){bButtonHeld=false;state.keys.x=false;$('back-button').classList.remove('held')}$('action-button').title=tr('A · Z · interact / confirm','A · Z · تفاعل / تأكيد');$('back-button').title=tr('B · X · back; hold Left Shift to sprint','B · X · رجوع؛ اضغط Shift اليسرى باستمرار للجري')}
 const controlPrevious={update,applyLanguage,reset,clearMovement,updatePrompt,interact,newSceneInteraction,marchInteraction,nearbyEntrance,drawOutdoorLayers};
 function outdoorPortals(){
  if(state.scene==='village')return ELARIS_HOMES.map((b,i)=>({...b,id:'home',entrance:villageEntrances[i+1]})).concat([{x:192,y:35,w:130,h:86,door:{x:257},id:'shrine',entrance:villageEntrances[0]}]);
@@ -315,7 +315,7 @@ drawOutdoorLayers=function(buildings,paintBuilding,extra=[]){const portals=outdo
 updatePrompt=function(){controlPrevious.updatePrompt();if(state.mode!=='map')return;const b=currentPortal();if(!b)return;ui.prompt.classList.remove('hidden');ui.prompt.textContent=tr(b.id==='shrine'?'A  Enter shrine':b.entrance||BELL_HOMES.includes(b)?'A  Try door':'A  Enter building',b.id==='shrine'?'A  ادخل المزار':b.entrance||BELL_HOMES.includes(b)?'A  جرّب الباب':'A  ادخل المبنى')};
 interact=function(){if(state.mode==='map'){const b=currentPortal();if(b&&state.player.y<=b.y+b.h+9){if(state.scene==='village'){if(b.id==='shrine')enterShrine();else showLockedDoor();return}if(state.scene==='town'&&state.townRaidCleared){enterTownBuilding(b.id);return}if(state.scene==='bellhaven'&&b.id!=='arena'){if(BELL_HOMES.includes(b))sayAndResume(missionLines(bellNight()?'The door is barred. Its occupants have gone to bed.':'A family lives here. Their door is locked.',bellNight()?'الباب موصد. ذهب سكانه إلى النوم.':'تسكن عائلة هنا. بابها مقفل.','Narrator'));else enterMarchBuilding(b.id);return}}}controlPrevious.interact()};
 update=function(){syncChamberMusic();controlPrevious.update();syncGameButtons()};
-applyLanguage=function(){controlPrevious.applyLanguage();$('controls-help').textContent=tr('Move: arrows · A: Z · B: X (hold while moving to sprint) · Battle menus / targets: arrows · Mouse / touch available','الحركة: الأسهم · A: زر Z · B: زر X (اضغط أثناء الحركة للجري) · قوائم القتال / الأهداف: الأسهم · الماوس / اللمس متاحان');syncGameButtons()};
+applyLanguage=function(){controlPrevious.applyLanguage();$('controls-help').textContent=tr('Move: arrows / WASD · Interact: click the nearby action or press Z · Sprint: hold Left Shift · Battle menus / targets: arrows · Mouse / touch available','الحركة: الأسهم أو WASD · التفاعل: انقر زر الفعل القريب أو اضغط Z · الجري: اضغط Shift اليسرى باستمرار · قوائم القتال / الأهداف: الأسهم · الماوس واللمس متاحان');syncGameButtons()};
 reset=function(){clearBButton();controlPrevious.reset();syncGameButtons()};
 clearMovement=function(){clearBButton();controlPrevious.clearMovement()};
 $('back-button').addEventListener('pointerdown',e=>{if(bButtonPointer!==null||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();bButtonPointer=e.pointerId;try{$('back-button').setPointerCapture?.(e.pointerId)}catch(_){}if(state.mode==='map'){bButtonHeld=true;$('back-button').classList.add('held')}else pressB()});
