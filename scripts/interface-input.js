@@ -13,8 +13,9 @@ function prepareEnemyKnowledge(b){
  if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
 }
 function revealEnemyHealth(enemy,index,b=state.battle){
- if(!b)return false;prepareEnemyKnowledge(b);b.healthKnowledge[index]=true;
- const known=state.devTesting?testKnownEnemies:knownEnemies;known.add(enemyKnowledgeKey(enemy));
+ if(!b)return false;prepareEnemyKnowledge(b);const key=enemyKnowledgeKey(enemy),enemies=b.kind?b.enemies:[enemy];
+ enemies.forEach((candidate,i)=>{if(enemyKnowledgeKey(candidate)===key)b.healthKnowledge[i]=true});
+ const known=state.devTesting?testKnownEnemies:knownEnemies;known.add(key);
  if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
  return true
 }
