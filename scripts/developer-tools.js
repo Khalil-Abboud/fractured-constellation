@@ -13,7 +13,8 @@ applyLanguage=function(){campLanguagePrevious();$('scout-blue').textContent=tr('
 openScoutShop=function(){campShopPrevious();$('scout-blue').disabled=state.gold<25};
 $('scout-blue').addEventListener('click',()=>{if(state.mode!=='shop')return;if(state.gold<25){$('shop-message').textContent=tr('Not enough gold.','لا يوجد ذهب كافٍ.');return}state.gold-=25;state.blueHerbs++;battleSfx('shield');openScoutShop();$('shop-message').textContent=tr('A blue herb was added to the shared pack. Restores 30 mana.','أُضيفت عشبة زرقاء إلى حقيبة الفريق. تستعيد 30 مانا.')});
 $('scout-gear').addEventListener('click',()=>{if(state.mode!=='shop')return;closeScoutShop();openMarket('gear');$('market-title').textContent=tr('Scout · Camp equipment','الكشاف · تجهيزات المعسكر')});
-$('stats-button').addEventListener('click',showStats);$('stats-close').addEventListener('click',closeStats);
+// Resolve the final renderer at click time; later scripts replace showStats.
+$('stats-button').addEventListener('click',()=>showStats());$('stats-close').addEventListener('click',closeStats);
 // Use physical keys so Z/X/F, WASD and Left Shift work with Arabic, Russian and Caps Lock layouts.
 function gameControlKey(e){
  const physical={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyZ:'z',KeyX:'x',KeyF:'f',ShiftLeft:'shift'}[e.code];

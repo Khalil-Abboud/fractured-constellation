@@ -71,3 +71,39 @@
 [dir=rtl] #stats-screen .party-face-button::before{content:'◀'}
 @media(max-width:700px){.party-sheets{grid-template-columns:1fr}.party-sheet{padding:16px}.party-hero-top{gap:14px}.party-face-button{width:92px;height:105px}.party-numbers{padding:12px;gap:6px}.party-equipment{padding-top:12px}.party-weapon{min-height:58px}.party-armor{gap:10px}.party-gear-slot{max-height:none;height:76px}.party-herbs{align-items:stretch;flex-direction:column;gap:10px;padding:10px}.party-herbs h3{border-bottom:1px solid #647485;padding-bottom:7px!important}#stats-screen .stats-remedy{flex-direction:column;gap:3px;font-size:.85em;padding:3px}.party-skill-list{gap:8px}}
 @media(max-height:460px) and (min-width:701px){#stats-screen .party-panel{font-size:18px}.party-face-button{width:75px;height:86px}.party-sheet{padding:14px 10px}.party-hero-top{gap:10px}.party-resource{font-size:16px}.party-numbers{gap:5px;padding:10px}.party-equipment{padding-top:10px}.party-weapon{min-height:54px}.party-gear-slot{height:64px;max-height:none}.party-track{height:12px}}
+
+/* Three explicit pages; the opener always starts with the illustrated overview. */
+#stats-screen .party-tabs{display:flex;align-items:center;gap:.45em;flex-wrap:wrap}
+#stats-screen .party-tabs [role=tab]{padding:.3em .7em;border:1px solid #8292a1;background:#10263a;color:#b6c6d3;font:inherit;font-size:1em;min-height:34px}
+#stats-screen .party-tabs [role=tab][aria-selected=true]{border-color:#f5cf73;background:#354335;color:#ffe4a0;box-shadow:inset 0 -3px #d7af50}
+#stats-screen .party-tabs [role=tab]:focus-visible{outline:2px solid #ffe4a0;outline-offset:2px}
+#stats-screen .party-bottom{border-top:1px solid #576e80;margin-top:1cqh;padding-top:1.2cqh}
+#stats-screen .party-section-name{font:inherit;font-size:1.35em;color:#f4d17e;margin:0 0 1em}
+.party-skills-page .party-sheet{padding:1em}
+.party-skill-descriptions{display:grid;gap:1em}
+.party-skill-description{border:1px solid #567087;background:#10283c;padding:.7em}
+.party-skill-description header{display:flex;align-items:center;justify-content:space-between;gap:1em;color:#ffe3a0}
+.party-skill-description header strong{font-weight:400;font-size:1.12em}
+.party-skill-description header span{color:#82cae6;white-space:nowrap}
+.party-skill-description p{font:400 16px/1.5 Arial,Tahoma,sans-serif;letter-spacing:0;margin:.6em 0 0;color:#d3e0e6}
+[dir=rtl] #stats-screen .party-skill-description p{font-size:1em;line-height:1.75}
+.party-bag-targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1em;margin-bottom:1.5em}
+.party-bag-target{display:flex;align-items:center;gap:.75em;min-width:0;padding:.5em;border:1px solid #536e83;background:#10263a;color:#fff0ce;text-align:start;font:inherit;cursor:pointer}
+.party-bag-target.selected{border:2px solid #f0cc72;background:#23374a}
+#stats-screen .party-bag-target .party-face{flex:none;width:48px;height:52px}
+.party-bag-target>span:last-child{display:grid;gap:.35em;min-width:0}
+.party-bag-target strong{font-weight:400}
+.party-bag-target small{font-size:.8em;color:#afcadd}
+.party-bag-note{font:400 14px/1.5 Arial,Tahoma,sans-serif;color:#b2c7d5;margin:1em 0 1.5em}
+[dir=rtl] #stats-screen .party-bag-note{font-size:.9em;line-height:1.7}
+.party-bag-equipment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}
+.party-bag-gear{padding:.75em;border:1px solid #5b7388;background:#0d2237}
+.party-bag-gear h3{font:inherit;color:#e9c87b;margin:0 0 .65em}
+.party-bag-gear-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5em}
+.party-bag-item{display:flex;align-items:center;gap:.6em;padding:.5em;background:#132d44;min-width:0}
+.party-bag-item>span{font-size:.9em;overflow-wrap:anywhere}
+.party-bag-item small{display:block;color:#91c782;font-size:.8em;margin-top:.3em}
+#stats-screen .party-bag #stats-remedy-list{gap:.5em}
+#stats-screen .party-bag .stats-remedy{flex-wrap:wrap;padding:.6em .3em;border:1px solid #506e86;background:#122c43}
+#stats-screen .party-remedy-effect{flex-basis:100%;font-size:.75em;color:#a7d6ae;text-align:center}
+@media(max-width:700px){#stats-screen .party-tabs{gap:5px}#stats-screen .party-tabs [role=tab]{padding:.4em .5em;font-size:.85em}.party-bag-targets,.party-bag-equipment{grid-template-columns:1fr}.party-bag-gear-items{grid-template-columns:repeat(2,minmax(0,1fr))}#stats-screen .party-bottom{align-items:center}}

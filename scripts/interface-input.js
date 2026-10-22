@@ -109,27 +109,59 @@ function statsBar(label,value,max,kind){
  const percent=Math.max(0,Math.min(100,value/Math.max(1,max)*100));
  return '<div class="party-resource"><span>'+label+'</span><div class="party-track"><i class="'+kind+'" style="width:'+percent+'%"></i></div><b dir="ltr">'+value+' / '+max+'</b></div>'
 }
-function renderPartyStats(message=''){
- ensureEquipment();ensureInventory();state.statsTarget=Math.max(0,Math.min(state.party.length-1,state.statsTarget||0));
+
+function partyOverviewHTML(){
  const sheets=state.party.map((h,index)=>{
   const stats=heroStats(h),weapon=GEAR[h.equipment?.weapon];
   const gearTitle=slot=>{const g=GEAR[h.equipment?.[slot]];return tr(...SLOT_LABELS[slot])+': '+(g?tr(g.en,g.ar)+' · '+gearBonusText(g):tr('Empty','فارغ'))};
   const armor=['armor','helmet','boots','gloves'].map(slot=>'<button class="party-gear-slot'+(GEAR[h.equipment?.[slot]]?' equipped':' empty')+'" type="button" data-gear-hero="'+index+'" data-gear-slot="'+slot+'" title="'+statsEscape(gearTitle(slot))+'" aria-label="'+statsEscape(gearTitle(slot))+'">'+partyPixelIcon(slot,!GEAR[h.equipment?.[slot]])+'</button>').join('');
-  const skills=heroSkillEntries(h).filter(([,skill])=>h.level>=skill.level).map(([id,skill])=>'<button type="button" class="party-skill" data-skill="'+id+'">'+statsEscape(tr(skill.en,skill.ar))+' <small>'+skill.cost+' '+tr('AP','طاقة')+'</small></button>').join('');
-  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><button class="party-face-button" type="button" data-select-hero="'+index+'" aria-label="'+statsEscape(tr('Select '+h.name,'اختر '+(HERO_AR[h.name]||h.name)))+'" aria-pressed="'+(index===state.statsTarget)+'"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'"></span></button><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div>'+(state.statsDetails?'<div class="party-skills"><h3>'+tr('Skills','المهارات')+'</h3><div class="party-skill-list">'+(skills||'<p>'+tr('No skills learned yet','لم تُكتسب مهارات بعد')+'</p>')+'</div></div>':'<dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('EQUIPMENT','التجهيزات')+'</h3><button class="party-weapon" type="button" data-gear-hero="'+index+'" data-gear-slot="weapon" title="'+statsEscape(gearTitle('weapon'))+'">'+partyPixelIcon(weapon?.type||weaponTypes[h.name]||'sword',!weapon)+'<span>'+statsEscape(weapon?tr(weapon.en,weapon.ar):tr('Empty','فارغ'))+'</span></button><div class="party-armor">'+armor+'</div></div>')+'</section>'
+  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><button class="party-face-button" type="button" data-select-hero="'+index+'" aria-label="'+statsEscape(tr('Select '+h.name,'اختر '+(HERO_AR[h.name]||h.name)))+'" aria-pressed="'+(index===state.statsTarget)+'"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'"></span></button><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div>'+'<dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('EQUIPMENT','التجهيزات')+'</h3><button class="party-weapon" type="button" data-gear-hero="'+index+'" data-gear-slot="weapon" title="'+statsEscape(gearTitle('weapon'))+'">'+partyPixelIcon(weapon?.type||weaponTypes[h.name]||'sword',!weapon)+'<span>'+statsEscape(weapon?tr(weapon.en,weapon.ar):tr('Empty','فارغ'))+'</span></button><div class="party-armor">'+armor+'</div></div></section>'
  }).join('');
+ return '<div class="party-sheets">'+sheets+'</div>'
+}
+function partySkillsHTML(){
+ return '<div class="party-sheets party-skills-page">'+state.party.map(h=>{
+  const learned=heroSkillEntries(h).filter(([,skill])=>h.level>=skill.level);
+  return '<section class="party-sheet"><h3 class="party-section-name">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</h3><div class="party-skill-descriptions">'+(learned.map(([,skill])=>'<article class="party-skill-description"><header><strong>'+statsEscape(tr(skill.en,skill.ar))+'</strong><span>'+skill.cost+' '+tr('AP','طاقة')+'</span></header><p>'+statsEscape(tr(...skill.desc))+'</p></article>').join('')||'<p>'+tr('No skills learned yet.','لم تُكتسب مهارات بعد.')+'</p>')+'</div></section>'
+ }).join('')+'</div>'
+}
+function partyBagHTML(){
+ const targets=state.party.map((h,i)=>{
+  const stats=heroStats(h);
+  return '<button type="button" class="party-bag-target'+(i===state.statsTarget?' selected':'')+'" data-select-hero="'+i+'" aria-pressed="'+(i===state.statsTarget)+'"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'"></span><span><strong>'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</strong><small dir="ltr">HP '+h.hp+'/'+stats.hp+' · AP '+h.ap+'/'+stats.ap+'</small></span></button>'
+ }).join('');
+ const gear=state.party.map(h=>{
+  const owned=[...new Set(h.gearBag||[])].filter(id=>GEAR[id]);
+  return '<section class="party-bag-gear"><h3>'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</h3><div class="party-bag-gear-items">'+(owned.map(id=>{
+   const g=GEAR[id],equipped=h.equipment?.[g.slot]===id;
+   return '<div class="party-bag-item" title="'+statsEscape(gearBonusText(g))+'">'+partyPixelIcon(g.type||g.slot)+'<span>'+statsEscape(tr(g.en,g.ar))+(equipped?'<small>'+tr('Equipped','مجهّز')+'</small>':'')+'</span></div>'
+  }).join('')||'<p>'+tr('No equipment in the bag.','لا توجد تجهيزات في الحقيبة.')+'</p>')+'</div></section>'
+ }).join('');
+ return '<section class="party-bag"><h3 class="party-section-name">'+tr('Use items on','استخدم الأغراض على')+'</h3><div class="party-bag-targets">'+targets+'</div><section class="party-herbs"><h3>'+tr('HERBS','الأعشاب')+'</h3><div id="stats-remedy-list"></div></section><p class="party-bag-note">'+tr('Select a companion, then an herb. Herbs that affect everyone are shared by the whole party.','اختر رفيقًا ثم عشبة. الأعشاب الجماعية تؤثر في الفريق كله.')+(state.statsReturn==='battle'?tr(' Using an item takes one turn.',' استخدام الغرض يستهلك دورًا.'):'')+'</p><h3 class="party-section-name">'+tr('Owned equipment','التجهيزات المملوكة')+'</h3><div class="party-bag-equipment">'+gear+'</div></section>'
+}
+function switchPartyTab(tab,focus=false){
+ if(state.mode!=='stats'||!['overview','skills','bag'].includes(tab))return;
+ state.statsTab=tab;renderPartyStats();$('stats-content').scrollTop=0;
+ if(focus)$('party-tab-'+tab).focus?.()
+}
+function renderPartyStats(message=''){
+ ensureEquipment();ensureInventory();state.statsTarget=Math.max(0,Math.min(state.party.length-1,state.statsTarget||0));
+ if(!['overview','skills','bag'].includes(state.statsTab))state.statsTab='overview';
  $('stats-title').textContent=tr('PARTY','الفريق');
  $('stats-close').innerHTML='<kbd>ESC</kbd> '+tr('Close','إغلاق')+' <span aria-hidden="true">×</span>';
- $('party-toggle-details').innerHTML='<kbd>TAB</kbd> '+(state.statsDetails?tr('Overview','نظرة عامة'):tr('Details','التفاصيل'));
- $('party-toggle-details').setAttribute('aria-expanded',String(!!state.statsDetails));
+ $('party-tabs').setAttribute('aria-label',tr('Party pages','صفحات الفريق'));
+ const tabs=[['overview','Overview','نظرة عامة'],['skills','Skills','مهارات'],['bag','Bag','حقيبة']];
+ tabs.forEach(([id,en,ar])=>{const button=$('party-tab-'+id),active=state.statsTab===id;button.textContent=tr(en,ar);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1});
  $('stats-gold').innerHTML=partyPixelIcon('coin')+'<strong>'+state.gold+'</strong>';
  $('stats-gold').setAttribute('aria-label',tr('Gold: ','الذهب: ')+state.gold);
- $('stats-content').innerHTML='<div class="party-sheets">'+sheets+'</div><section class="party-herbs"><h3>'+tr('HERBS','الأعشاب')+'</h3><div id="stats-remedy-list"></div></section><p id="stats-remedy-message" role="status"></p>';
- $('stats-content').querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{const scroll=$('stats-content').scrollTop;state.statsTarget=Number(button.dataset.selectHero);renderPartyStats();$('stats-content').scrollTop=scroll}));
- $('stats-content').querySelectorAll('[data-gear-slot]').forEach(button=>button.addEventListener('click',()=>{$('stats-remedy-message').textContent=button.title}));
- $('stats-remedy-message').textContent=message||(state.statsReturn==='battle'?tr('Select a companion, then an herb. Using an item takes one turn.','اختر رفيقًا ثم عشبة. استخدام الغرض يستهلك دورًا.'):tr('Select a portrait, then an herb to heal.','اختر وجه الشخصية ثم العشبة لعلاجها.'));
- renderStatsRemedyList();bindSkillTooltips($('stats-content'));
+ const content=$('stats-content');content.setAttribute('aria-labelledby','party-tab-'+state.statsTab);
+ content.innerHTML=(state.statsTab==='skills'?partySkillsHTML():state.statsTab==='bag'?partyBagHTML():partyOverviewHTML())+'<p id="stats-remedy-message" role="status"></p>';
+ content.querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{const scroll=content.scrollTop;state.statsTarget=Number(button.dataset.selectHero);renderPartyStats();content.scrollTop=scroll}));
+ content.querySelectorAll('[data-gear-slot]').forEach(button=>button.addEventListener('click',()=>{$('stats-remedy-message').textContent=button.title}));
+ $('stats-remedy-message').textContent=message;
+ if(state.statsTab==='bag')renderStatsRemedyList()
 }
+
 function renderStatsRemedyList(){
  const list=$('stats-remedy-list');list.replaceChildren();
  const names={herb:['Healing','شفاء'],blue:['Blue','زرقاء'],vital:['Vital','حيوية'],azure:['Azure','لازورد'],dawnleaf:['Dawnleaf','ورقة الفجر']};
@@ -137,7 +169,7 @@ function renderStatsRemedyList(){
   const button=document.createElement('button');button.type='button';button.className='stats-remedy'+(remedyCount(id)===0?' depleted':'');button.dataset.item=id;button.disabled=!canUseStatsRemedy(id);
   const detail=tr(item.en,item.ar)+' · +'+item.heal+' '+tr(item.resource==='hp'?'HP':'AP',item.resource==='hp'?'صحة':'طاقة')+(item.all?tr(' · Everyone',' · الجميع'):'');
   button.title=detail;button.setAttribute('aria-label',detail+' · '+remedyCount(id));
-  button.innerHTML=partyPixelIcon(id)+'<span>'+tr(...(names[id]||[item.en,item.ar]))+'</span><strong>'+remedyCount(id)+'</strong>';
+  button.innerHTML=partyPixelIcon(id)+'<span>'+tr(...(names[id]||[item.en,item.ar]))+'</span><strong>'+remedyCount(id)+'</strong><small class="party-remedy-effect">+'+item.heal+' '+tr(item.resource==='hp'?'HP':'AP',item.resource==='hp'?'صحة':'طاقة')+(item.all?tr(' · All',' · الجميع'):'')+'</small>';
   button.addEventListener('click',()=>useStatsRemedy(id));list.appendChild(button)
  })
 }
@@ -154,13 +186,19 @@ function useStatsRemedy(id){
 }
 showStats=function(){
  if(!['map','battle','end'].includes(state.mode)||(state.mode==='battle'&&(!state.battle?.kind||state.battle.busy)))return;
- if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;state.statsDetails=false;renderPartyStats();$('stats-screen').classList.remove('hidden');$('stats-close').focus?.();
+ if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;state.statsTab='overview';renderPartyStats();$('stats-screen').classList.remove('hidden');$('stats-close').focus?.();
 };
 applyLanguage=function(){battleStatsPrevious.applyLanguage();if(state.mode==='stats')renderPartyStats()};
 
 
-$('party-toggle-details').addEventListener('click',()=>{state.statsDetails=!state.statsDetails;renderPartyStats()});
-document.addEventListener('keydown',e=>{if(state.mode==='stats'&&e.key==='Tab'&&!editingGameInput(e)){e.preventDefault();state.statsDetails=!state.statsDetails;renderPartyStats()}});
+for(const tab of ['overview','skills','bag'])$('party-tab-'+tab).addEventListener('click',()=>switchPartyTab(tab));
+$('party-tabs').addEventListener('keydown',e=>{
+ const order=['overview','skills','bag'];let index=order.indexOf(state.statsTab);
+ if(e.key==='Home')index=0;else if(e.key==='End')index=2;
+ else if(e.key==='ArrowRight')index=(index+(state.lang==='ar'?2:1))%3;
+ else if(e.key==='ArrowLeft')index=(index+(state.lang==='ar'?1:2))%3;else return;
+ e.preventDefault();switchPartyTab(order[index],true)
+});
 $('stats-screen').addEventListener('click',e=>{if(e.target===$('stats-screen'))closeStats()});
 window.addEventListener('resize',()=>{if(state.mode==='stats')renderPartyStats()});
 // The exploration prompt is also a real mouse/touch button, anchored above the nearby person or door.
