@@ -83,42 +83,65 @@ function canUseStatsRemedy(id){
  const item=REMEDIES[id];if(!item||remedyCount(id)<=0)return false;
  return statsRemedyTargets(item).some(h=>(item.resource==='hp'||h.hp>0)&&h[item.resource]<heroStats(h)[item.resource]);
 }
-function statsPageSize(){const box=$('viewport').getBoundingClientRect();return box.width<600&&box.height>box.width?1:2}
+
+// Small code-drawn pixel icons keep inventory visuals sharp without external images.
+function partyPixelIcon(kind,muted=false){
+ const shapes={
+ sword:'<path fill="#263344" d="M18 1h5v5h-2v3h-3v3h-3v3h-3v2h-2v-2H8v-2h2v-3h3V7h3V4h2z"/><path fill="#d8e8ed" d="M19 2h3v3h-2v3h-3v3h-3v3h-3v-3h2V8h3V5h3z"/><path fill="#819fb3" d="M20 5h2v1h-2v3h-3v3h-3v3h-3v-2h3v-3h3V7h3z"/><path fill="#e7bd54" d="M6 11h2v2h2v2h2v2h-2v2H8v-2H6v-2H4v-2h2z"/><path fill="#8e5a2f" d="M6 16h3v2H7v2H5v2H2v-3h2v-2h2z"/><path fill="#f5d875" d="M1 21h4v2H1z"/>',
+ staff:'<path fill="#5b361d" d="M13 9h4v3h-2v3h-3v3H9v3H6v2H2v-4h3v-3h3v-3h3v-3h2z"/><path fill="#c28a44" d="M13 10h2v2h-2v3h-3v3H7v3H4v-2h2v-3h3v-3h3z"/><path fill="#e7bd55" d="M12 1h7v2h3v7h-3v3h-7v-2H9V4h3z"/><path fill="#584925" d="M13 3h5v2h2v4h-2v2h-5V9h-2V5h2z"/><path fill="#1c66b7" d="M14 3h4v2h2v4h-3v2h-4V8h-2V5h3z"/><path fill="#70d0f5" d="M14 3h3v2h-3v3h-2V5h2z"/>',
+ dagger:'<path fill="#8ea8ba" d="M16 2h6v6h-3v3h-3v3h-3v3H9v-5h3V9h3V6h1z"/><path fill="#e5f1ed" d="M17 3h4v2h-3v3h-3v3h-3v3h-2v-2h3V9h3V6h1z"/><path fill="#e0b951" d="M7 12h2v2h2v2h3v2h-3v2H9v-2H7v-2H5v-2h2z"/><path fill="#875335" d="M7 17h3v2H7v3H3v-4h4z"/>',
+ bow:'<path fill="#b88445" d="M6 1h5v2h4v3h3v4h2v5h-2v4h-3v3h-4v2H6v-3h5v-2h3v-4h2v-4h-2V7h-3V4H6z"/><path fill="#ead99c" d="M6 2h1v21H6z"/><path fill="#c3d3dc" d="M1 11h19v2H1zM18 8h2v2h3v3h-3v2h-2v-3h2v-1h-2z"/>',
+ armor:'<path fill="#30465b" d="M8 2h8v2h4v2h3v6h-4v10H5V12H1V6h3V4h4z"/><path fill="#809db2" d="M8 3h3v4h3V3h2v2h4v2h2v4h-4v10H6V11H2V7h2V5h4z"/><path fill="#b4c4ca" d="M6 7h3v3h7V7h2v5h-2v2H8v-2H6z"/><path fill="#546d83" d="M8 14h8v2H8zM7 19h10v2H7z"/>',
+ helmet:'<path fill="#30465b" d="M9 1h6v3h4v3h2v12h-5v4H8v-4H3V7h2V4h4z"/><path fill="#89a5b6" d="M10 3h4v3h4v3h2v9h-4v-8h-3v12h-2V10H8v8H4V9h2V6h4z"/><path fill="#b6c8ce" d="M11 3h2v17h-2zM6 9h4v2H6zM14 9h4v2h-4z"/>',
+ boots:'<path fill="#30465b" d="M4 2h7v12h2v8H1v-7h3zM14 2h7v12h2v8H13v-7h1z"/><path fill="#819eae" d="M5 3h5v12h2v5H2v-4h3zM15 3h5v12h2v5h-8v-4h1z"/><path fill="#b5c6cc" d="M5 3h5v3H5zM15 3h5v3h-5z"/><path fill="#536e82" d="M2 19h10v2H2zM14 19h8v2h-8z"/>',
+ gloves:'<path fill="#30465b" d="M3 10h3V4h3v4h1V2h3v6h1V3h3v6h1V5h3v9h-2v4h-2v5H7v-5H5v-3H3z"/><path fill="#87a2b3" d="M4 11h2v3h2V5h1v7h2V3h1v9h3V4h1v9h3V6h1v8h-2v4h-2v4H8v-5H6v-3H4z"/><path fill="#b4c5cb" d="M8 18h8v3H8z"/>',
+ coin:'<path fill="#775022" d="M7 1h10v2h4v4h2v10h-2v4h-4v2H7v-2H3v-4H1V7h2V3h4z"/><path fill="#d49b35" d="M7 3h10v2h3v3h1v8h-2v3h-3v2H8v-2H5v-3H3V8h2V5h2z"/><path fill="#ffe39a" d="M8 4h8v2H8zM5 7h3v10H5zM8 18h8v2H8z"/><path fill="#f5c65e" d="M10 7h6v2h-3v7h-3z"/>'
+ };
+ let body=shapes[kind];
+ if(!body){
+ const palette={herb:['#4a8e2e','#a3d65a','#315c28'],blue:['#398ebc','#8be6ff','#244b8b'],vital:['#d2ddd4','#fff8d1','#6d9550'],azure:['#5b72d9','#8fe7ff','#44458c'],dawnleaf:['#daa131','#ffe17c','#936523']}[kind]||['#4a8e2e','#a3d65a','#315c28'];
+ body='<path fill="'+palette[2]+'" d="M11 7h3v14h-3zM7 17h4v3H7zM14 13h5v3h-5z"/><path fill="'+palette[0]+'" d="M2 8h5v2h3v5H5v-2H2zM14 5h3V2h5v6h-2v3h-6zM3 18h5v-2h3v5H8v2H3zM15 16h4v2h3v4h-6zM8 1h4v3h2v5h-5V6H7V3h1z"/><path fill="'+palette[1]+'" d="M3 9h3v2H3zM17 3h4v2h-4zM9 2h2v4H9zM4 19h4v2H4zM17 18h3v2h-3z"/>';
+ }
+ return '<svg class="party-pixel-icon'+(muted?' muted':'')+'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" shape-rendering="crispEdges">'+body+'</svg>'
+}
+
 function statsBar(label,value,max,kind){
  const percent=Math.max(0,Math.min(100,value/Math.max(1,max)*100));
  return '<div class="party-resource"><span>'+label+'</span><div class="party-track"><i class="'+kind+'" style="width:'+percent+'%"></i></div><b dir="ltr">'+value+' / '+max+'</b></div>'
 }
 function renderPartyStats(message=''){
  ensureEquipment();ensureInventory();state.statsTarget=Math.max(0,Math.min(state.party.length-1,state.statsTarget||0));
- const size=statsPageSize(),pages=Math.max(1,Math.ceil(state.party.length/size));
- state.statsPage=Math.max(0,Math.min(pages-1,state.statsPage||0));
- const first=state.statsPage*size;
- const icons={weapon:'⚔',armor:'♜',helmet:'♟',boots:'♧',gloves:'✦'};
- const sheets=state.party.slice(first,first+size).map((h,offset)=>{
-  const index=first+offset,stats=heroStats(h);
-  const slotHTML=slot=>{const gear=GEAR[h.equipment?.[slot]],label=tr(...SLOT_LABELS[slot]),name=gear?tr(gear.en,gear.ar):tr('Empty','فارغ');return '<div class="party-gear '+(gear?'equipped':'empty')+'" title="'+statsEscape(label+': '+name)+'"><span class="gear-symbol" aria-hidden="true">'+icons[slot]+'</span><span><small>'+label+'</small><b>'+statsEscape(name)+'</b></span></div>'};
+ const sheets=state.party.map((h,index)=>{
+  const stats=heroStats(h),weapon=GEAR[h.equipment?.weapon];
+  const gearTitle=slot=>{const g=GEAR[h.equipment?.[slot]];return tr(...SLOT_LABELS[slot])+': '+(g?tr(g.en,g.ar)+' · '+gearBonusText(g):tr('Empty','فارغ'))};
+  const armor=['armor','helmet','boots','gloves'].map(slot=>'<button class="party-gear-slot'+(GEAR[h.equipment?.[slot]]?' equipped':' empty')+'" type="button" data-gear-hero="'+index+'" data-gear-slot="'+slot+'" title="'+statsEscape(gearTitle(slot))+'" aria-label="'+statsEscape(gearTitle(slot))+'">'+partyPixelIcon(slot,!GEAR[h.equipment?.[slot]])+'</button>').join('');
   const skills=heroSkillEntries(h).filter(([,skill])=>h.level>=skill.level).map(([id,skill])=>'<button type="button" class="party-skill" data-skill="'+id+'">'+statsEscape(tr(skill.en,skill.ar))+' <small>'+skill.cost+' '+tr('AP','طاقة')+'</small></button>').join('');
-  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><div class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'" role="img" aria-label="'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'"></div><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div><div class="party-card-body"><dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('Equipment','التجهيزات')+'</h3>'+slotHTML('weapon')+'<div class="party-armor">'+['armor','helmet','boots','gloves'].map(slotHTML).join('')+'</div></div></div><div class="party-skills hidden"><h3>'+tr('Skills · hover or tap for details','المهارات · مرر أو انقر للشرح')+'</h3><div class="party-skill-list">'+(skills||'<p>'+tr('No skills learned yet','لم تُكتسب مهارات بعد')+'</p>')+'</div></div><button class="party-details" type="button" aria-expanded="false">'+tr('Skills & details','المهارات والتفاصيل')+'</button></section>'
+  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><button class="party-face-button" type="button" data-select-hero="'+index+'" aria-label="'+statsEscape(tr('Select '+h.name,'اختر '+(HERO_AR[h.name]||h.name)))+'" aria-pressed="'+(index===state.statsTarget)+'"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'"></span></button><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div>'+(state.statsDetails?'<div class="party-skills"><h3>'+tr('Skills','المهارات')+'</h3><div class="party-skill-list">'+(skills||'<p>'+tr('No skills learned yet','لم تُكتسب مهارات بعد')+'</p>')+'</div></div>':'<dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('EQUIPMENT','التجهيزات')+'</h3><button class="party-weapon" type="button" data-gear-hero="'+index+'" data-gear-slot="weapon" title="'+statsEscape(gearTitle('weapon'))+'">'+partyPixelIcon(weapon?.type||weaponTypes[h.name]||'sword',!weapon)+'<span>'+statsEscape(weapon?tr(weapon.en,weapon.ar):tr('Empty','فارغ'))+'</span></button><div class="party-armor">'+armor+'</div></div>')+'</section>'
  }).join('');
- $('stats-title').textContent=tr('PARTY','الفريق');$('stats-close').textContent=tr('✕ Close','✕ إغلاق');
- $('stats-gold').textContent='◈ '+state.gold+' '+tr('Gold','ذهب');
- $('stats-content').innerHTML='<div class="party-sheets" data-count="'+Math.min(size,state.party.length-first)+'">'+sheets+'</div><section class="party-herbs"><div class="party-herbs-heading"><h3>'+tr('HERBS','الأعشاب')+'</h3><label for="stats-remedy-target">'+tr('Use on','استخدم على')+'</label><select id="stats-remedy-target">'+state.party.map((h,i)=>'<option value="'+i+'"'+(i===state.statsTarget?' selected':'')+'>'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</option>').join('')+'</select></div><div id="stats-remedy-list"></div></section><div class="party-footer"><span id="stats-remedy-message" role="status"></span><div class="party-pages">'+(pages>1?'<button id="party-page-prev" type="button" aria-label="'+tr('Previous companions','الرفاق السابقون')+'"'+(state.statsPage===0?' disabled':'')+'>‹</button><span>'+(state.statsPage+1)+' / '+pages+'</span><button id="party-page-next" type="button" aria-label="'+tr('Next companions','الرفاق التاليون')+'"'+(state.statsPage===pages-1?' disabled':'')+'>›</button>':'')+'</div><span class="party-key-hint">'+(state.statsReturn==='battle'?tr('One item = one turn','غرض واحد = دور واحد'):tr('Esc · Close','Esc · إغلاق'))+'</span></div>';
- const select=$('stats-remedy-target');select.addEventListener('change',()=>{state.statsTarget=Number(select.value);state.statsPage=Math.floor(state.statsTarget/size);renderPartyStats()});
- $('stats-content').querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{state.statsTarget=Number(button.dataset.selectHero);renderPartyStats()}));
- $('stats-content').querySelectorAll('.party-details').forEach(button=>button.addEventListener('click',()=>{const sheet=button.closest('.party-sheet'),expanded=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(expanded));sheet.querySelector('.party-card-body').classList.toggle('hidden',expanded);sheet.querySelector('.party-skills').classList.toggle('hidden',!expanded);button.textContent=expanded?tr('← Statistics & equipment','← الإحصائيات والتجهيزات'):tr('Skills & details','المهارات والتفاصيل')}));
- if(pages>1){$('party-page-prev').addEventListener('click',()=>{state.statsPage--;renderPartyStats()});$('party-page-next').addEventListener('click',()=>{state.statsPage++;renderPartyStats()})}
- $('stats-remedy-message').textContent=message;renderStatsRemedyList();bindSkillTooltips($('stats-content'));
+ $('stats-title').textContent=tr('PARTY','الفريق');
+ $('stats-close').innerHTML='<kbd>ESC</kbd> '+tr('Close','إغلاق')+' <span aria-hidden="true">×</span>';
+ $('party-toggle-details').innerHTML='<kbd>TAB</kbd> '+(state.statsDetails?tr('Overview','نظرة عامة'):tr('Details','التفاصيل'));
+ $('party-toggle-details').setAttribute('aria-expanded',String(!!state.statsDetails));
+ $('stats-gold').innerHTML=partyPixelIcon('coin')+'<strong>'+state.gold+'</strong>';
+ $('stats-gold').setAttribute('aria-label',tr('Gold: ','الذهب: ')+state.gold);
+ $('stats-content').innerHTML='<div class="party-sheets">'+sheets+'</div><section class="party-herbs"><h3>'+tr('HERBS','الأعشاب')+'</h3><div id="stats-remedy-list"></div></section><p id="stats-remedy-message" role="status"></p>';
+ $('stats-content').querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{const scroll=$('stats-content').scrollTop;state.statsTarget=Number(button.dataset.selectHero);renderPartyStats();$('stats-content').scrollTop=scroll}));
+ $('stats-content').querySelectorAll('[data-gear-slot]').forEach(button=>button.addEventListener('click',()=>{$('stats-remedy-message').textContent=button.title}));
+ $('stats-remedy-message').textContent=message||(state.statsReturn==='battle'?tr('Select a companion, then an herb. Using an item takes one turn.','اختر رفيقًا ثم عشبة. استخدام الغرض يستهلك دورًا.'):tr('Select a portrait, then an herb to heal.','اختر وجه الشخصية ثم العشبة لعلاجها.'));
+ renderStatsRemedyList();bindSkillTooltips($('stats-content'));
 }
-
 function renderStatsRemedyList(){
  const list=$('stats-remedy-list');list.replaceChildren();
+ const names={herb:['Healing','شفاء'],blue:['Blue','زرقاء'],vital:['Vital','حيوية'],azure:['Azure','لازورد'],dawnleaf:['Dawnleaf','ورقة الفجر']};
  Object.entries(REMEDIES).forEach(([id,item])=>{
-  const button=document.createElement('button');button.type='button';button.className='stats-remedy';button.dataset.item=id;button.disabled=!canUseStatsRemedy(id);
-  const name=document.createElement('strong');name.textContent=tr(item.en,item.ar)+' ×'+remedyCount(id);button.appendChild(name);
-  const effect=document.createElement('span');effect.textContent='+'+item.heal+' '+tr(item.resource==='hp'?'HP':'MP',item.resource==='hp'?'صحة':'مانا')+(item.all?tr(' · All companions',' · كل الرفاق'):'');button.appendChild(effect);
-  button.addEventListener('click',()=>useStatsRemedy(id));list.appendChild(button);
+  const button=document.createElement('button');button.type='button';button.className='stats-remedy'+(remedyCount(id)===0?' depleted':'');button.dataset.item=id;button.disabled=!canUseStatsRemedy(id);
+  const detail=tr(item.en,item.ar)+' · +'+item.heal+' '+tr(item.resource==='hp'?'HP':'AP',item.resource==='hp'?'صحة':'طاقة')+(item.all?tr(' · Everyone',' · الجميع'):'');
+  button.title=detail;button.setAttribute('aria-label',detail+' · '+remedyCount(id));
+  button.innerHTML=partyPixelIcon(id)+'<span>'+tr(...(names[id]||[item.en,item.ar]))+'</span><strong>'+remedyCount(id)+'</strong>';
+  button.addEventListener('click',()=>useStatsRemedy(id));list.appendChild(button)
  })
 }
+
 function useStatsRemedy(id){
  if(state.mode!=='stats'||!canUseStatsRemedy(id))return false;
  const inBattle=state.statsReturn==='battle',b=state.battle;if(inBattle&&(!b?.kind||b.busy))return false;
@@ -131,11 +154,13 @@ function useStatsRemedy(id){
 }
 showStats=function(){
  if(!['map','battle','end'].includes(state.mode)||(state.mode==='battle'&&(!state.battle?.kind||state.battle.busy)))return;
- if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;state.statsPage=0;renderPartyStats();$('stats-screen').classList.remove('hidden');$('stats-close').focus?.();
+ if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;state.statsDetails=false;renderPartyStats();$('stats-screen').classList.remove('hidden');$('stats-close').focus?.();
 };
 applyLanguage=function(){battleStatsPrevious.applyLanguage();if(state.mode==='stats')renderPartyStats()};
 
 
+$('party-toggle-details').addEventListener('click',()=>{state.statsDetails=!state.statsDetails;renderPartyStats()});
+document.addEventListener('keydown',e=>{if(state.mode==='stats'&&e.key==='Tab'&&!editingGameInput(e)){e.preventDefault();state.statsDetails=!state.statsDetails;renderPartyStats()}});
 $('stats-screen').addEventListener('click',e=>{if(e.target===$('stats-screen'))closeStats()});
 window.addEventListener('resize',()=>{if(state.mode==='stats')renderPartyStats()});
 // The exploration prompt is also a real mouse/touch button, anchored above the nearby person or door.
