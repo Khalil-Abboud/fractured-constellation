@@ -83,23 +83,36 @@ function canUseStatsRemedy(id){
  const item=REMEDIES[id];if(!item||remedyCount(id)<=0)return false;
  return statsRemedyTargets(item).some(h=>(item.resource==='hp'||h.hp>0)&&h[item.resource]<heroStats(h)[item.resource]);
 }
+function statsPageSize(){const box=$('viewport').getBoundingClientRect();return box.width<600&&box.height>box.width?1:2}
+function statsBar(label,value,max,kind){
+ const percent=Math.max(0,Math.min(100,value/Math.max(1,max)*100));
+ return '<div class="party-resource"><span>'+label+'</span><div class="party-track"><i class="'+kind+'" style="width:'+percent+'%"></i></div><b dir="ltr">'+value+' / '+max+'</b></div>'
+}
 function renderPartyStats(message=''){
  ensureEquipment();ensureInventory();state.statsTarget=Math.max(0,Math.min(state.party.length-1,state.statsTarget||0));
- const labels=[['hp','HP','الصحة'],['ap','Mana','المانا'],['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']];
- const sheets=state.party.map(h=>{
-  const stats=heroStats(h),values={...stats,hp:h.hp+' / '+stats.hp,ap:h.ap+' / '+stats.ap};
-  const equipment=Object.entries(SLOT_LABELS).map(([slot,[en,ar]])=>{const g=GEAR[h.equipment?.[slot]];return '<li>'+statsEscape(tr(en,ar))+': '+statsEscape(g?tr(g.en,g.ar):tr('None','لا يوجد'))+'</li>'}).join('');
-  const skills=heroSkillEntries(h).filter(([,s])=>h.level>=s.level).map(([id,s])=>'<li tabindex="0" data-skill="'+id+'">'+statsEscape(tr(s.en,s.ar))+' <span dir="ltr">· '+s.cost+' MP</span></li>').join('');
-  return '<section class="stats-sheet"><h3 dir="ltr">'+statsEscape(h.name)+' <small>LV '+h.level+'</small></h3><p class="stats-exp">'+tr('EXP','الخبرة')+' <span dir="ltr">'+h.xp+' / '+h.level*20+'</span></p><dl>'+labels.map(([id,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+values[id]+'</dd>').join('')+'</dl><details class="stats-fold"><summary>'+tr('Equipment','التجهيزات')+'</summary><ul>'+equipment+'</ul></details><details class="stats-fold"><summary>'+tr('Skills','المهارات')+'</summary><ul>'+(skills||'<li>'+tr('No skills learned yet.','لم تُكتسب مهارات بعد.')+'</li>')+'</ul></details></section>';
+ const size=statsPageSize(),pages=Math.max(1,Math.ceil(state.party.length/size));
+ state.statsPage=Math.max(0,Math.min(pages-1,state.statsPage||0));
+ const first=state.statsPage*size;
+ const icons={weapon:'⚔',armor:'♜',helmet:'♟',boots:'♧',gloves:'✦'};
+ const sheets=state.party.slice(first,first+size).map((h,offset)=>{
+  const index=first+offset,stats=heroStats(h);
+  const slotHTML=slot=>{const gear=GEAR[h.equipment?.[slot]],label=tr(...SLOT_LABELS[slot]),name=gear?tr(gear.en,gear.ar):tr('Empty','فارغ');return '<div class="party-gear '+(gear?'equipped':'empty')+'" title="'+statsEscape(label+': '+name)+'"><span class="gear-symbol" aria-hidden="true">'+icons[slot]+'</span><span><small>'+label+'</small><b>'+statsEscape(name)+'</b></span></div>'};
+  const skills=heroSkillEntries(h).filter(([,skill])=>h.level>=skill.level).map(([id,skill])=>'<button type="button" class="party-skill" data-skill="'+id+'">'+statsEscape(tr(skill.en,skill.ar))+' <small>'+skill.cost+' '+tr('AP','طاقة')+'</small></button>').join('');
+  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><div class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'" role="img" aria-label="'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'"></div><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div><div class="party-card-body"><dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('Equipment','التجهيزات')+'</h3>'+slotHTML('weapon')+'<div class="party-armor">'+['armor','helmet','boots','gloves'].map(slotHTML).join('')+'</div></div></div><div class="party-skills hidden"><h3>'+tr('Skills · hover or tap for details','المهارات · مرر أو انقر للشرح')+'</h3><div class="party-skill-list">'+(skills||'<p>'+tr('No skills learned yet','لم تُكتسب مهارات بعد')+'</p>')+'</div></div><button class="party-details" type="button" aria-expanded="false">'+tr('Skills & details','المهارات والتفاصيل')+'</button></section>'
  }).join('');
- $('stats-title').textContent=tr('Party & items','الفريق والأغراض');$('stats-close').textContent=tr('Close','إغلاق');
- $('stats-content').innerHTML='<div class="team-wallet">'+tr('Party gold','ذهب الفريق')+': <strong>'+state.gold+'</strong></div><div class="stats-grid">'+sheets+'</div><section class="stats-medicine"><h3>'+tr('Medicine bag','حقيبة الأدوية')+'</h3><label for="stats-remedy-target">'+tr('Use on','استخدم على')+'</label> <select id="stats-remedy-target">'+state.party.map((h,i)=>'<option value="'+i+'"'+(i===state.statsTarget?' selected':'')+'>'+statsEscape(h.name)+'</option>').join('')+'</select><div id="stats-remedy-list"></div><p id="stats-remedy-message" role="status"></p>'+(state.statsReturn==='battle'?'<p class="stats-item-note">'+tr('Using an item consumes the acting companion’s turn.','استخدام غرض يستهلك دور الرفيق الذي يلعب الآن.')+'</p>':'')+'</section>';
- const select=$('stats-remedy-target');select.addEventListener('change',()=>{state.statsTarget=Number(select.value);renderStatsRemedyList()});
+ $('stats-title').textContent=tr('PARTY','الفريق');$('stats-close').textContent=tr('✕ Close','✕ إغلاق');
+ $('stats-gold').textContent='◈ '+state.gold+' '+tr('Gold','ذهب');
+ $('stats-content').innerHTML='<div class="party-sheets" data-count="'+Math.min(size,state.party.length-first)+'">'+sheets+'</div><section class="party-herbs"><div class="party-herbs-heading"><h3>'+tr('HERBS','الأعشاب')+'</h3><label for="stats-remedy-target">'+tr('Use on','استخدم على')+'</label><select id="stats-remedy-target">'+state.party.map((h,i)=>'<option value="'+i+'"'+(i===state.statsTarget?' selected':'')+'>'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</option>').join('')+'</select></div><div id="stats-remedy-list"></div></section><div class="party-footer"><span id="stats-remedy-message" role="status"></span><div class="party-pages">'+(pages>1?'<button id="party-page-prev" type="button" aria-label="'+tr('Previous companions','الرفاق السابقون')+'"'+(state.statsPage===0?' disabled':'')+'>‹</button><span>'+(state.statsPage+1)+' / '+pages+'</span><button id="party-page-next" type="button" aria-label="'+tr('Next companions','الرفاق التاليون')+'"'+(state.statsPage===pages-1?' disabled':'')+'>›</button>':'')+'</div><span class="party-key-hint">'+(state.statsReturn==='battle'?tr('One item = one turn','غرض واحد = دور واحد'):tr('Esc · Close','Esc · إغلاق'))+'</span></div>';
+ const select=$('stats-remedy-target');select.addEventListener('change',()=>{state.statsTarget=Number(select.value);state.statsPage=Math.floor(state.statsTarget/size);renderPartyStats()});
+ $('stats-content').querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{state.statsTarget=Number(button.dataset.selectHero);renderPartyStats()}));
+ $('stats-content').querySelectorAll('.party-details').forEach(button=>button.addEventListener('click',()=>{const sheet=button.closest('.party-sheet'),expanded=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(expanded));sheet.querySelector('.party-card-body').classList.toggle('hidden',expanded);sheet.querySelector('.party-skills').classList.toggle('hidden',!expanded);button.textContent=expanded?tr('← Statistics & equipment','← الإحصائيات والتجهيزات'):tr('Skills & details','المهارات والتفاصيل')}));
+ if(pages>1){$('party-page-prev').addEventListener('click',()=>{state.statsPage--;renderPartyStats()});$('party-page-next').addEventListener('click',()=>{state.statsPage++;renderPartyStats()})}
  $('stats-remedy-message').textContent=message;renderStatsRemedyList();bindSkillTooltips($('stats-content'));
 }
+
 function renderStatsRemedyList(){
  const list=$('stats-remedy-list');list.replaceChildren();
- Object.entries(REMEDIES).filter(([id])=>['herb','blue'].includes(id)||remedyCount(id)>0).forEach(([id,item])=>{
+ Object.entries(REMEDIES).forEach(([id,item])=>{
   const button=document.createElement('button');button.type='button';button.className='stats-remedy';button.dataset.item=id;button.disabled=!canUseStatsRemedy(id);
   const name=document.createElement('strong');name.textContent=tr(item.en,item.ar)+' ×'+remedyCount(id);button.appendChild(name);
   const effect=document.createElement('span');effect.textContent='+'+item.heal+' '+tr(item.resource==='hp'?'HP':'MP',item.resource==='hp'?'صحة':'مانا')+(item.all?tr(' · All companions',' · كل الرفاق'):'');button.appendChild(effect);
@@ -118,11 +131,13 @@ function useStatsRemedy(id){
 }
 showStats=function(){
  if(!['map','battle','end'].includes(state.mode)||(state.mode==='battle'&&(!state.battle?.kind||state.battle.busy)))return;
- if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;renderPartyStats();$('stats-screen').classList.remove('hidden');
+ if(state.battle?.auto)stopAutoBattle();state.statsReturn=state.mode;state.mode='stats';state.keys={};state.statsTarget=0;state.statsPage=0;renderPartyStats();$('stats-screen').classList.remove('hidden');$('stats-close').focus?.();
 };
 applyLanguage=function(){battleStatsPrevious.applyLanguage();if(state.mode==='stats')renderPartyStats()};
 
 
+$('stats-screen').addEventListener('click',e=>{if(e.target===$('stats-screen'))closeStats()});
+window.addEventListener('resize',()=>{if(state.mode==='stats')renderPartyStats()});
 // The exploration prompt is also a real mouse/touch button, anchored above the nearby person or door.
 const contextPromptPrevious=updatePrompt;
 function contextPromptAnchor(){
