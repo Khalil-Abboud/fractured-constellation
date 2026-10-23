@@ -110,25 +110,29 @@ function statsBar(label,value,max,kind){
  return '<div class="party-resource"><span>'+label+'</span><div class="party-track"><i class="'+kind+'" style="width:'+percent+'%"></i></div><b dir="ltr">'+value+' / '+max+'</b></div>'
 }
 
+function partyPortraitHTML(h){
+ const name=tr(h.name,HERO_AR[h.name]||h.name);
+ return '<span class="party-portrait-frame"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'" role="img" aria-label="'+statsEscape(name)+'"></span></span>'
+}
 function partyOverviewHTML(){
  const sheets=state.party.map((h,index)=>{
   const stats=heroStats(h),weapon=GEAR[h.equipment?.weapon];
   const gearTitle=slot=>{const g=GEAR[h.equipment?.[slot]];return tr(...SLOT_LABELS[slot])+': '+(g?tr(g.en,g.ar)+' · '+gearBonusText(g):tr('Empty','فارغ'))};
   const armor=['armor','helmet','boots','gloves'].map(slot=>'<button class="party-gear-slot'+(GEAR[h.equipment?.[slot]]?' equipped':' empty')+'" type="button" data-gear-hero="'+index+'" data-gear-slot="'+slot+'" title="'+statsEscape(gearTitle(slot))+'" aria-label="'+statsEscape(gearTitle(slot))+'">'+partyPixelIcon(slot,!GEAR[h.equipment?.[slot]])+'</button>').join('');
-  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><button class="party-face-button" type="button" data-select-hero="'+index+'" aria-label="'+statsEscape(tr('Select '+h.name,'اختر '+(HERO_AR[h.name]||h.name)))+'" aria-pressed="'+(index===state.statsTarget)+'"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'"></span></button><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div>'+'<dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('EQUIPMENT','التجهيزات')+'</h3><button class="party-weapon" type="button" data-gear-hero="'+index+'" data-gear-slot="weapon" title="'+statsEscape(gearTitle('weapon'))+'">'+partyPixelIcon(weapon?.type||weaponTypes[h.name]||'sword',!weapon)+'<span>'+statsEscape(weapon?tr(weapon.en,weapon.ar):tr('Empty','فارغ'))+'</span></button><div class="party-armor">'+armor+'</div></div></section>'
+  return '<section class="party-sheet'+(index===state.statsTarget?' selected':'')+'" data-party-index="'+index+'"><div class="party-hero-top"><button class="party-face-button" type="button" data-select-hero="'+index+'" aria-label="'+statsEscape(tr('Select '+h.name,'اختر '+(HERO_AR[h.name]||h.name)))+'" aria-pressed="'+(index===state.statsTarget)+'">'+partyPortraitHTML(h)+'</button><div class="party-vitals"><div class="party-hero-heading"><button class="party-select" type="button" data-select-hero="'+index+'">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</button><span>'+tr('LV','مستوى')+' '+h.level+'</span></div>'+statsBar(tr('HP','صحة'),h.hp,stats.hp,'health')+statsBar(tr('AP','طاقة'),h.ap,stats.ap,'mana')+statsBar(tr('EXP','خبرة'),h.xp,h.level*20,'experience')+'</div></div>'+'<dl class="party-numbers">'+[['attack','Attack','الهجوم'],['defense','Defense','الدفاع'],['magic','Magic','السحر'],['speed','Speed','السرعة']].map(([key,en,ar])=>'<dt>'+tr(en,ar)+'</dt><dd>'+stats[key]+'</dd>').join('')+'</dl><div class="party-equipment"><h3>'+tr('EQUIPMENT','التجهيزات')+'</h3><button class="party-weapon" type="button" data-gear-hero="'+index+'" data-gear-slot="weapon" title="'+statsEscape(gearTitle('weapon'))+'">'+partyPixelIcon(weapon?.type||weaponTypes[h.name]||'sword',!weapon)+'<span>'+statsEscape(weapon?tr(weapon.en,weapon.ar):tr('Empty','فارغ'))+'</span></button><div class="party-armor">'+armor+'</div></div></section>'
  }).join('');
  return '<div class="party-sheets">'+sheets+'</div>'
 }
 function partySkillsHTML(){
  return '<div class="party-sheets party-skills-page">'+state.party.map(h=>{
   const learned=heroSkillEntries(h).filter(([,skill])=>h.level>=skill.level);
-  return '<section class="party-sheet"><h3 class="party-section-name">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</h3><div class="party-skill-descriptions">'+(learned.map(([,skill])=>'<article class="party-skill-description"><header><strong>'+statsEscape(tr(skill.en,skill.ar))+'</strong><span>'+skill.cost+' '+tr('AP','طاقة')+'</span></header><p>'+statsEscape(tr(...skill.desc))+'</p></article>').join('')||'<p>'+tr('No skills learned yet.','لم تُكتسب مهارات بعد.')+'</p>')+'</div></section>'
+  return '<section class="party-sheet"><header class="party-skills-hero">'+partyPortraitHTML(h)+'<div><h3 class="party-section-name">'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</h3><span>'+tr('LV','مستوى')+' '+h.level+'</span></div></header><div class="party-skill-descriptions">'+(learned.map(([,skill])=>'<article class="party-skill-description"><header><strong>'+statsEscape(tr(skill.en,skill.ar))+'</strong><span>'+skill.cost+' '+tr('AP','طاقة')+'</span></header><p>'+statsEscape(tr(...skill.desc))+'</p></article>').join('')||'<p>'+tr('No skills learned yet.','لم تُكتسب مهارات بعد.')+'</p>')+'</div></section>'
  }).join('')+'</div>'
 }
 function partyBagHTML(){
  const targets=state.party.map((h,i)=>{
   const stats=heroStats(h);
-  return '<button type="button" class="party-bag-target'+(i===state.statsTarget?' selected':'')+'" data-select-hero="'+i+'" aria-pressed="'+(i===state.statsTarget)+'"><span class="party-face battle-portrait portrait-'+h.name.toLowerCase()+'"></span><span><strong>'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</strong><small dir="ltr">HP '+h.hp+'/'+stats.hp+' · AP '+h.ap+'/'+stats.ap+'</small></span></button>'
+  return '<button type="button" class="party-bag-target'+(i===state.statsTarget?' selected':'')+'" data-select-hero="'+i+'" aria-pressed="'+(i===state.statsTarget)+'">'+partyPortraitHTML(h)+'<span><strong>'+statsEscape(tr(h.name,HERO_AR[h.name]||h.name))+'</strong><small dir="ltr">HP '+h.hp+'/'+stats.hp+' · AP '+h.ap+'/'+stats.ap+'</small></span></button>'
  }).join('');
  const gear=state.party.map(h=>{
   const owned=[...new Set(h.gearBag||[])].filter(id=>GEAR[id]);
