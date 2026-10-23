@@ -70,11 +70,33 @@ developmentJump=function(stage){testKnownEnemies.clear();battleStatsPrevious.dev
 const skillTooltipRenderPrevious=renderCommands;
 function skillTooltip(){let tip=$('skill-tooltip');if(!tip){tip=document.createElement('div');tip.id='skill-tooltip';tip.className='hidden';tip.setAttribute('role','tooltip');$('game').appendChild(tip)}return tip}
 function hideSkillTooltip(){skillTooltip().classList.add('hidden')}
-function showSkillTooltip(element){const s=SKILLS[element.dataset.skill];if(!s)return;const tip=skillTooltip();tip.textContent=tr(s.en,s.ar)+' — '+skillDescription(s);tip.classList.remove('hidden')}
-function bindSkillTooltips(root){
- root.querySelectorAll?.('[data-skill]').forEach(element=>{const s=SKILLS[element.dataset.skill];if(!s)return;element.title=skillDescription(s);element.setAttribute?.('aria-describedby','skill-tooltip');element.addEventListener('mouseenter',()=>showSkillTooltip(element));element.addEventListener('mouseleave',hideSkillTooltip);element.addEventListener('focus',()=>showSkillTooltip(element));element.addEventListener('blur',hideSkillTooltip)})
+function battleHelp(element){
+ const s=SKILLS[element.dataset.skill],item=REMEDIES[element.dataset.item],b=state.battle;
+ if(!s&&!item)return null;
+ const heroName=h=>h?tr(h.name,HERO_AR[h.name]||h.name):tr('No eligible companion','لا يوجد رفيق مناسب');
+ let target;
+ if(item){
+  const eligible=item.resource==='ap'?state.party.filter(h=>h.hp>0):state.party;
+  const h=eligible.slice().sort((a,c)=>a[item.resource]/heroStats(a)[item.resource]-c[item.resource]/heroStats(c)[item.resource])[0];
+  target=item.all?tr('All companions, including fallen allies.','كل الرفاق، بمن فيهم الساقطون.'):!b?.kind?heroName(state.party[0]):tr('Automatically: ','تلقائيًا: ')+heroName(h)+tr(item.resource==='ap'?' (lowest AP percentage).':' (lowest HP percentage).',item.resource==='ap'?' (أقل نسبة طاقة).':' (أقل نسبة صحة).');
+ }else if(s.kind==='shield')target=b?.kind?tr('All living companions.','كل الرفاق الأحياء.'):heroName(state.party[0]);
+ else if(s.kind==='heal')target=heroName(state.party.filter(h=>h.hp>0&&h.hp<heroStats(h).hp).sort((a,c)=>a.hp/heroStats(a).hp-c.hp/heroStats(c).hp)[0])+tr(' (living ally with lowest HP percentage).',' (الرفيق الحي صاحب أقل نسبة صحة).');
+ else target=s.all?tr('All living enemies.','كل الأعداء الأحياء.'):tr('Selected enemy','العدو المحدد');
+ return {name:tr((s||item).en,(s||item).ar),description:s?skillDescription(s):remedyDetail(item),target:tr('Target: ','الهدف: ')+target};
 }
-renderCommands=function(){hideSkillTooltip();skillTooltipRenderPrevious();Array.from(ui.commands.children).forEach(button=>{if(SKILLS[button.dataset.action])button.dataset.skill=button.dataset.action});bindSkillTooltips(ui.commands)};
+function showSkillTooltip(element){
+ const help=battleHelp(element);if(!help)return;const tip=skillTooltip();tip.replaceChildren();
+ for(const [tag,key]of[['strong','name'],['span','description'],['span','target']]){const line=document.createElement(tag);line.textContent=help[key];tip.appendChild(line)}
+ tip.classList.remove('hidden');
+ const game=$('game').getBoundingClientRect(),rect=element.getBoundingClientRect(),scaleX=game.width/$('game').clientWidth||1,scaleY=game.height/$('game').clientHeight||1;
+ const width=game.width/scaleX,height=game.height/scaleY,box=tip.getBoundingClientRect();
+ tip.style.left=Math.max(8,Math.min((rect.left-game.left)/scaleX,width-box.width/scaleX-8))+'px';
+ tip.style.top=Math.max(8,Math.min((rect.bottom-game.top)/scaleY+8,height-box.height/scaleY-8))+'px';
+}
+function bindSkillTooltips(root){
+ root.querySelectorAll?.('[data-skill],[data-item]').forEach(element=>{if(!battleHelp(element))return;element.removeAttribute('title');element.setAttribute?.('aria-describedby','skill-tooltip');element.addEventListener('mouseenter',()=>showSkillTooltip(element));element.addEventListener('mouseleave',hideSkillTooltip);element.addEventListener('focus',()=>showSkillTooltip(element));element.addEventListener('blur',hideSkillTooltip)})
+}
+renderCommands=function(){hideSkillTooltip();skillTooltipRenderPrevious();Array.from(ui.commands.children).forEach(button=>{if(SKILLS[button.dataset.action])button.dataset.skill=button.dataset.action;if(REMEDIES[button.dataset.action])button.dataset.item=button.dataset.action});bindSkillTooltips(ui.commands)};
 
 // Essential statistics, optional equipment/skills, and a shared medicine bag.
 function statsEscape(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -158,7 +180,7 @@ function renderPartyStats(message=''){
  tabs.forEach(([id,en,ar])=>{const button=$('party-tab-'+id),active=state.statsTab===id;button.textContent=tr(en,ar);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1});
  $('stats-gold').innerHTML=partyPixelIcon('coin')+'<strong>'+state.gold+'</strong>';
  $('stats-gold').setAttribute('aria-label',tr('Gold: ','الذهب: ')+state.gold);
- const content=$('stats-content');content.setAttribute('aria-labelledby','party-tab-'+state.statsTab);
+ const content=$('stats-content');content.setAttribute('aria-labelledby','party-tab-'+state.statsTab);content.dataset.partyTab=state.statsTab;content.style.setProperty('--party-columns',Math.max(1,Math.min(4,state.party.length)));
  content.innerHTML=(state.statsTab==='skills'?partySkillsHTML():state.statsTab==='bag'?partyBagHTML():partyOverviewHTML())+'<p id="stats-remedy-message" role="status"></p>';
  content.querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{const scroll=content.scrollTop;state.statsTarget=Number(button.dataset.selectHero);renderPartyStats();content.scrollTop=scroll}));
  content.querySelectorAll('[data-gear-slot]').forEach(button=>button.addEventListener('click',()=>{$('stats-remedy-message').textContent=button.title}));

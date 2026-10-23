@@ -120,3 +120,25 @@
 #stats-screen .party-bag-targets{grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
 @media(max-width:700px){#stats-screen{--party-portrait-size:84px}#stats-screen .party-bag-targets{grid-template-columns:1fr}}
 @media(max-height:460px) and (min-width:701px){#stats-screen{--party-portrait-size:72px}}
+
+/* Compact illustrated overview; wide screens display the entire four-person party. */
+#stats-screen{--party-portrait-size:clamp(64px,10cqh,84px)}
+#stats-content[data-party-tab=overview] .party-sheets{gap:12px;align-items:start}
+#stats-content[data-party-tab=overview] .party-sheet{padding:12px 10px}
+#stats-content[data-party-tab=overview] .party-hero-top{display:grid;grid-template-columns:var(--party-portrait-size) minmax(0,1fr);gap:8px 10px;margin-bottom:12px;padding-inline-start:4px}
+#stats-content[data-party-tab=overview] .party-vitals{display:contents}
+#stats-content[data-party-tab=overview] .party-face-button{grid-column:1;grid-row:1}
+#stats-content[data-party-tab=overview] .party-hero-heading{grid-column:2;grid-row:1;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;margin:0}
+#stats-content[data-party-tab=overview] .party-select{font-size:clamp(18px,2.8cqh,26px);overflow-wrap:anywhere}
+#stats-content[data-party-tab=overview] .party-hero-heading>span{font-size:18px}
+#stats-content[data-party-tab=overview] .party-resource{grid-column:1/-1;font-size:16px;grid-template-columns:2em minmax(20px,1fr) 4.8em;gap:5px}
+#stats-content[data-party-tab=overview] .party-track{height:13px}
+#stats-content[data-party-tab=overview] .party-numbers{grid-template-columns:1fr auto 1fr auto;gap:9px 8px;padding:12px 2px;font-size:18px}
+#stats-content[data-party-tab=overview] .party-equipment{padding:10px 2px 0}
+#stats-content[data-party-tab=overview] .party-equipment h3{font-size:18px}
+#stats-content[data-party-tab=overview] .party-weapon{min-height:43px;gap:8px;font-size:18px;line-height:1.1}
+#stats-content[data-party-tab=overview] .party-weapon .party-pixel-icon{width:32px;height:32px}
+#stats-content[data-party-tab=overview] .party-armor{gap:8px}
+#stats-content[data-party-tab=overview] .party-gear-slot{height:50px;min-height:40px;max-height:50px;aspect-ratio:auto;padding:5px}
+@container(min-width:1000px){#stats-content[data-party-tab=overview] .party-sheets{grid-template-columns:repeat(var(--party-columns,4),minmax(0,1fr))}}
+@container(max-width:599px){#stats-content[data-party-tab=overview] .party-sheets{grid-template-columns:1fr}}
