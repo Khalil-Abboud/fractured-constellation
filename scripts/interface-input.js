@@ -180,7 +180,7 @@ function renderPartyStats(message=''){
  tabs.forEach(([id,en,ar])=>{const button=$('party-tab-'+id),active=state.statsTab===id;button.textContent=tr(en,ar);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1});
  $('stats-gold').innerHTML=partyPixelIcon('coin')+'<strong>'+state.gold+'</strong>';
  $('stats-gold').setAttribute('aria-label',tr('Gold: ','الذهب: ')+state.gold);
- const content=$('stats-content');content.setAttribute('aria-labelledby','party-tab-'+state.statsTab);content.dataset.partyTab=state.statsTab;content.style.setProperty('--party-columns',Math.max(1,Math.min(4,state.party.length)));
+ const content=$('stats-content');content.setAttribute('aria-labelledby','party-tab-'+state.statsTab);content.dataset.partyTab=state.statsTab;content.dataset.partyCount=Math.min(4,state.party.length);content.style.setProperty('--party-columns',Math.max(1,Math.min(4,state.party.length)));
  content.innerHTML=(state.statsTab==='skills'?partySkillsHTML():state.statsTab==='bag'?partyBagHTML():partyOverviewHTML())+'<p id="stats-remedy-message" role="status"></p>';
  content.querySelectorAll('[data-select-hero]').forEach(button=>button.addEventListener('click',()=>{const scroll=content.scrollTop;state.statsTarget=Number(button.dataset.selectHero);renderPartyStats();content.scrollTop=scroll}));
  content.querySelectorAll('[data-gear-slot]').forEach(button=>button.addEventListener('click',()=>{$('stats-remedy-message').textContent=button.title}));

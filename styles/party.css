@@ -140,5 +140,14 @@
 #stats-content[data-party-tab=overview] .party-weapon .party-pixel-icon{width:32px;height:32px}
 #stats-content[data-party-tab=overview] .party-armor{gap:8px}
 #stats-content[data-party-tab=overview] .party-gear-slot{height:50px;min-height:40px;max-height:50px;aspect-ratio:auto;padding:5px}
+#stats-content[data-party-tab=overview] .party-sheet{display:flex;flex-direction:column;min-height:0}
+#stats-content[data-party-tab=overview] .party-equipment{margin-top:auto;width:100%;box-sizing:border-box}
+#stats-content[data-party-tab=overview] .party-armor{width:100%;box-sizing:border-box}
+#stats-content[data-party-tab=overview] .party-gear-slot{box-sizing:border-box;overflow:hidden;isolation:isolate}
+#stats-content[data-party-tab=overview] .party-gear-slot .party-pixel-icon{width:64%;height:76%;max-width:100%;max-height:100%;overflow:hidden}
+/* Two-member parties keep the compact card proportions instead of growing their internals into the equipment row. */
+#stats-content[data-party-tab=overview][data-party-count="2"] .party-select{font-size:clamp(18px,2.3cqh,23px)}
+#stats-content[data-party-tab=overview][data-party-count="2"] .party-resource{font-size:15px}
+#stats-content[data-party-tab=overview][data-party-count="2"] .party-numbers{font-size:17px}
 @container(min-width:1000px){#stats-content[data-party-tab=overview] .party-sheets{grid-template-columns:repeat(var(--party-columns,4),minmax(0,1fr))}}
 @container(max-width:599px){#stats-content[data-party-tab=overview] .party-sheets{grid-template-columns:1fr}}
