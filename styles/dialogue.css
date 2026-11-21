@@ -10,6 +10,8 @@
  background:linear-gradient(115deg,#0d182cf7,#081326fa);box-shadow:0 7px 0 #030a14aa,0 9px 24px #0007;
  color:#f8f1d7;cursor:pointer
 }
+#dialogue-skip{position:absolute;top:8px;right:10px;z-index:2;min-height:27px;padding:4px 10px;border:1px solid #d7bd73;border-radius:4px;background:#111a35e8;color:#f6df9b;font:700 .7rem "VT323",monospace;letter-spacing:.04em;cursor:pointer}
+[dir=rtl] #dialogue-skip{right:auto;left:10px}
 #game #speaker,#game.desktop-ui #speaker{
  top:-28px;left:18px;right:auto;min-width:100px;max-width:85%;width:max-content;
  padding:6px 17px;border:2px solid #edc76c;border-radius:0;

@@ -1,0 +1,51 @@
+/* Geometry for the horizontal combat HUD. Scoped above legacy desktop rules. */
+#game #battle-ui.cinematic #status-window{top:auto!important;bottom:2%!important;height:46%!important;justify-content:flex-end!important}
+#game #battle-ui.cinematic #status-window:has(.party-card:nth-child(4)){top:auto!important;bottom:2%!important;height:54%!important}
+#game #skill-tooltip.battle-skill-help{position:absolute;left:0;right:18%;top:auto;width:auto;max-height:100px;bottom:calc(100% + 8px);padding:7px 11px;border:1px solid #827496;border-radius:6px;background:#111827e8;box-shadow:0 3px 10px #0005;color:#dcdde9;font:400 clamp(10px,1cqw,14px)/1.4 Arial,Tahoma,sans-serif;pointer-events:none}
+#game #skill-tooltip.battle-skill-help>strong{font-size:1em;font-weight:600;color:#dfc6fa}
+#game #skill-tooltip.battle-skill-help>span+span{margin-top:3px;color:#aabbd4;font-size:.92em}
+#game #battle-ui.cinematic #command-window.spells-open,#game #battle-ui.cinematic #command-window.items-open{overflow:visible}
+#game #battle-ui.cinematic #command-window.spells-open #command-list,#game #battle-ui.cinematic #command-window.items-open #command-list{max-height:23cqh;overflow:auto}
+#game #battle-ui.cinematic .party-card .hp.taking-damage{background:linear-gradient(#fff0c3,#ff304e);box-shadow:0 0 7px #ff345d}
+#game #battle-ui.cinematic #command-window {
+ inset:auto 24% 2% 2%; width:auto; height:13%; min-height:0; max-height:none;
+ padding:7px; transform:none; border:2px solid #d6b56c; border-radius:10px;
+ background:linear-gradient(#282c40fa,#101727fa); box-shadow:inset 0 0 0 2px #64573e,0 4px 12px #0008;
+ display:flex; align-items:stretch; gap:8px; overflow:visible;
+}
+#game #battle-ui.cinematic #command-list {position:static;inset:auto;display:flex;flex:1;min-width:0;gap:6px;padding:0;margin:0;direction:ltr}
+#game #battle-ui.cinematic #command-list .command {
+ position:static;inset:auto!important;transform:none;flex:1;width:auto;height:auto;min-height:0;min-width:0;
+ padding:4px 2px;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+ border:1px solid #c8a764;border-radius:7px;background:linear-gradient(#303349,#151c2d);
+ color:#fff2d1;font:800 clamp(8px,1.2cqw,18px)/1.1 Arial,Tahoma,sans-serif;
+ text-align:center;white-space:normal;writing-mode:horizontal-tb;text-shadow:none;overflow:hidden;
+}
+#game #battle-ui.cinematic .command::before{display:none}
+#game #battle-ui.cinematic .command-icon{font-size:1.5em;line-height:1}
+#game #battle-ui.cinematic #battle-playback{position:static;inset:auto;flex:0 0 15%;width:auto;transform:none;display:flex;align-items:center;pointer-events:auto}
+#game #battle-ui.cinematic #battle-fast{width:100%;height:65%;min-height:0;padding:3px;border:1px solid #d5b068;border-radius:4px;background:linear-gradient(#57362c,#242033);font:800 clamp(8px,1cqw,14px)/1.1 Arial,Tahoma,sans-serif}
+#game #battle-ui.cinematic #command-window.spells-open,#game #battle-ui.cinematic #command-window.items-open{height:auto;max-height:31%;bottom:2%;overflow:auto}
+#game #battle-ui.cinematic #command-window.spells-open #command-list,#game #battle-ui.cinematic #command-window.items-open #command-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+#game #battle-ui.cinematic #command-window.spells-open .command,#game #battle-ui.cinematic #command-window.items-open .command{min-height:30px;font-size:clamp(9px,1.1cqw,16px)}
+#game #battle-ui.cinematic #status-window{inset:4% 1.5% auto auto;width:19%;max-width:19%;height:48%;transform:none;gap:5%;justify-content:flex-start}
+#game #battle-ui.cinematic .party-card{flex:0 1 28%;max-height:28%;transform:none;outline:0;grid-template-columns:35% minmax(0,1fr);gap:5%;padding:2%}
+#game #battle-ui.cinematic #status-window:has(.party-card:nth-child(4)){width:19%;max-width:19%;height:57%;gap:2%}
+#game #battle-ui.cinematic #status-window:has(.party-card:nth-child(4)) .party-card{flex-basis:23%;max-height:23%}
+#game #battle-ui.cinematic .party-card .battle-portrait{width:100%;height:auto;aspect-ratio:1}
+#game #battle-ui.cinematic .card-heading{font:800 clamp(9px,1.25cqw,18px)/1.15 Arial,Tahoma,sans-serif;margin:0 0 4px}
+#game #battle-ui.cinematic .card-heading strong{font:inherit}
+#game #battle-ui.cinematic .mini-row{font:700 clamp(7px,1cqw,14px)/1.15 Arial,Tahoma,sans-serif;gap:4px}
+#game #battle-ui.cinematic #battle-message{inset:3% 23% auto 24%;width:auto;max-width:none;font:700 clamp(10px,1.3cqw,19px)/1.3 Arial,Tahoma,sans-serif}
+#game #battle-ui.cinematic #enemy-targets{inset:3% auto auto 2%;width:21%;display:flex;flex-direction:column;gap:7px}
+#game #battle-ui.cinematic .cinematic-enemy{order:0;width:100%;height:auto;min-height:0;clip-path:none;display:flex;padding:6px;gap:7px;box-sizing:border-box;border:1px solid #9386af;border-radius:7px;background:linear-gradient(#1b2235ef,#101725ef);box-shadow:0 2px 5px #0008}
+#game #battle-ui.cinematic .cinematic-enemy.primary{order:0;padding:6px;border:2px solid #ffdb8a;box-shadow:0 0 9px #efbc66aa}
+#game #battle-ui.cinematic .enemy-emblem{width:25%;height:auto;aspect-ratio:1;flex-shrink:0;border:1px solid #b4a7c7;border-radius:4px;background:#22283c;image-rendering:pixelated}
+#game #battle-ui.cinematic .enemy-content,#game #battle-ui.cinematic .cinematic-enemy:not(.primary) .enemy-content{display:grid;grid-template-columns:1fr auto;gap:3px;font:700 clamp(8px,1.05cqw,16px)/1.2 Arial,Tahoma,sans-serif}
+#game #battle-ui.cinematic .enemy-content strong{grid-column:1/-1;font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#game #battle-ui.cinematic .enemy-health-label{color:#ff6f85}
+#game #battle-ui.cinematic .cinematic-hp-track{height:7px;transform:none}
+#game #battle-ui.cinematic .damage-pop strong{font-size:clamp(24px,5cqw,75px)}
+#game #battle-ui.cinematic .damage-pop.critical strong{font-size:clamp(32px,6.5cqw,98px)}
+#game #battle-ui.cinematic .damage-pop small{font-size:clamp(12px,2cqw,28px)}
+@media(max-width:650px){#game #battle-ui.cinematic #command-window{left:2%;right:24%;height:14%;padding:4px;gap:3px}#game #battle-ui.cinematic #command-list{gap:3px}#game #battle-ui.cinematic .cinematic-enemy,#game #battle-ui.cinematic .cinematic-enemy.primary{padding:3px;gap:3px}#game #battle-ui.cinematic .cinematic-hp-track{height:4px}}

@@ -88,6 +88,12 @@ function showSkillTooltip(element){
  const help=battleHelp(element);if(!help)return;const tip=skillTooltip();tip.replaceChildren();
  for(const [tag,key]of[['strong','name'],['span','description'],['span','target']]){const line=document.createElement(tag);line.textContent=help[key];tip.appendChild(line)}
  tip.classList.remove('hidden');
+ if(element.closest?.('#command-list')&&state.battle){
+  $('command-window').appendChild(tip);
+  tip.classList.add('battle-skill-help');tip.style.left='0';tip.style.top='auto';tip.style.bottom='calc(100% + 8px)';
+  return;
+ }
+ tip.classList.remove('battle-skill-help');tip.style.bottom='auto';$('game').appendChild(tip);
  const game=$('game').getBoundingClientRect(),rect=element.getBoundingClientRect(),scaleX=game.width/$('game').clientWidth||1,scaleY=game.height/$('game').clientHeight||1;
  const width=game.width/scaleX,height=game.height/scaleY,box=tip.getBoundingClientRect();
  tip.style.left=Math.max(8,Math.min((rect.left-game.left)/scaleX,width-box.width/scaleX-8))+'px';

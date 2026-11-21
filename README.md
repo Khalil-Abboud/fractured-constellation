@@ -2,6 +2,8 @@
 
 An offline, bilingual browser RPG by **Khalil Abboud / خليل عبود**. Part I follows Shadow, Astro and Venom from the burning village of Elaris to a voyage toward Valdorn, the capital of the Brotherhood of Dawn.
 
+Version 13 introduces the cinematic battle HUD, circular party portraits, curved command layout, selected-target health with gradual red damage animation, and prominent critical damage labels. Unknown enemy health remains full and marked with a question mark.
+
 ## Play locally
 
 Download the repository with **Code → Download ZIP**, extract it, and open `index.html` in a modern browser. Keep the `assets` folder beside it. No build step or installation is required. The standalone HTML shared in ChatGPT includes the same music inside one file and is convenient for offline play on a phone.

@@ -1,0 +1,72 @@
+#game #battle-ui.cinematic{font-family:Arial,Tahoma,sans-serif;container-type:inline-size}
+#game.desktop-ui #command-window,#game.desktop-ui #command-window.spells-open,#game.desktop-ui #command-window.skill-grid,#game.desktop-ui #command-window.items-open{left:auto;top:auto;right:3%;bottom:5%;transform:none}
+#game.desktop-ui #status-window,#game.desktop-ui #status-window.party-status{left:auto;right:1.5%;top:5%;bottom:auto;transform:none;width:17%;height:auto}
+#game #battle-bottom{inset:0;pointer-events:none}
+#game #battle-message{top:4%;left:43%;right:19%;width:auto;max-width:none;padding:9px 12px;border:0;border-block:1px solid #b68ce9;background:linear-gradient(90deg,transparent,#211c3ddd,transparent);color:#f2ddff;font-size:clamp(10px,1.3vw,19px);text-align:center;text-shadow:0 0 9px #ac52ff;box-shadow:none;pointer-events:none}
+#game #enemy-targets.cinematic-enemies{position:absolute;inset:3% auto auto 2%;width:35%;display:flex;flex-wrap:wrap;gap:7px;direction:ltr;pointer-events:auto}
+#game .cinematic-enemy{order:2;width:58px;height:43px;display:flex;align-items:center;gap:8px;padding:4px;border:1px solid #9f8ac6;border-radius:7px;background:linear-gradient(120deg,#111629eb,#242038df);color:#fff;box-shadow:0 0 8px #9569c655;cursor:pointer}
+#game .cinematic-enemy.primary{order:0;width:100%;height:64px;border:2px solid #c7a3fa;clip-path:polygon(5% 0,100% 0,95% 100%,0 100%);padding-inline:7%;box-shadow:inset 0 0 13px #ae70ef66}
+#game .enemy-emblem{font-size:24px;color:#d7bce9;text-shadow:0 0 8px #bc7afa}
+#game .enemy-content{flex:1;min-width:0;display:grid;grid-template-columns:1fr auto;gap:5px;text-align:start;font-size:clamp(10px,1.3vw,18px)}
+#game .cinematic-enemy:not(.primary) .enemy-content{display:none}
+#game .cinematic-hp-track{grid-column:1/-1;display:block;height:8px;border:1px solid #e4d9ef;background:#090c19;transform:skewX(-20deg);overflow:hidden}
+#game .cinematic-hp-fill{display:block;height:100%;background:linear-gradient(#c4f49b,#58a744);box-shadow:0 0 7px #95eb6f}
+#game .cinematic-hp-fill.taking-damage{background:linear-gradient(#ffaaa8,#e12b4d);box-shadow:0 0 10px #ff345d}
+#game #status-window,#game #status-window.party-status{position:absolute;inset:5% 1.5% auto auto;transform:none;width:17%;height:auto;display:flex;flex-direction:column;gap:12px;padding:0;background:none;border:0;box-shadow:none}
+#game .party-card{display:grid;grid-template-columns:42% 1fr;width:100%;max-width:none;padding:4px;gap:7px;border:0;border-bottom:1px solid #6d668d;background:linear-gradient(90deg,#1d1b31dd,#11162644);box-shadow:none;border-radius:60px 6px 6px 60px;align-items:center}
+#game .party-card.active{outline:0;background:linear-gradient(90deg,#7140ae99,#11162666);filter:drop-shadow(0 0 5px #b258ff)}
+#game .party-card .battle-portrait{width:100%;height:auto;aspect-ratio:1;border:3px solid #a6a0c5;border-radius:50%;grid-row:auto;box-shadow:0 0 0 2px #222039}
+#game .party-card.active .battle-portrait{border-color:#cb91ff;box-shadow:0 0 15px #b342ff}
+#game .party-card .card-heading{color:#fff;font-size:clamp(8px,1.1vw,16px);margin-bottom:5px}
+#game .party-card .card-heading small{display:none}
+#game .party-card .mini-row{font-size:clamp(7px,.9vw,13px);color:#fff;display:flex;justify-content:space-between}
+#game .party-card .mini-row span:first-child{color:#ff6f7c}
+#game .party-card .mini-row.ap-row span:first-child{color:#6bf29c}
+#game .party-card .meter{height:5px;margin:3px 0 6px;border:1px solid #a3a0b0;background:#080d18}
+#game .party-card .hp{background:linear-gradient(#ff9199,#e62e53)}
+#game .party-card .ap{background:linear-gradient(#91f4ae,#21bd6b)}
+#game #command-window{inset:auto 3% 3% auto;transform:none;width:29%;min-height:0;padding:12px;border:1px solid #a38ac3;border-radius:12px;background:linear-gradient(130deg,#10182af5,#21182ff5);box-shadow:0 0 20px #a54cff44;pointer-events:auto}
+#game #command-window::before,#game #command-window::after{display:none}
+#game #command-window.cinematic-wheel{width:33%;height:35%;padding:0;border-radius:100% 100% 8% 8%;background:radial-gradient(ellipse at 50% 100%,#b449ff77,#121a2fe8 65%);border:1px solid #cbb7e9}
+#game .cinematic-wheel #command-list{display:block;position:absolute;inset:0;padding:0;background:none}
+#game .cinematic-wheel .command{position:absolute;width:30%;height:39%;padding:4px 1px;background:linear-gradient(#332848a0,#151d30aa);border:1px solid #8e7bac;border-radius:12px;color:#fff;font-size:clamp(9px,1.15vw,17px);text-align:center;display:flex;align-items:center;justify-content:center;white-space:normal}
+#game .cinematic-wheel .command[data-action=attack]{left:35%;top:0}
+#game .cinematic-wheel .command[data-action=magic]{left:5%;top:22%}
+#game .cinematic-wheel .command[data-action=item]{right:5%;top:22%}
+#game .cinematic-wheel .command[data-action=auto]{left:1%;bottom:0}
+#game .cinematic-wheel .command[data-action=run]{right:1%;bottom:0}
+#game .cinematic-wheel .command[data-action=special]{left:35%;bottom:0;font-size:clamp(8px,.9vw,13px)}
+#game .command.selected,#game .command:hover{background:linear-gradient(#b44affaa,#542184dd)!important;box-shadow:0 0 12px #ba62ff;border-color:#e5bfff;color:#fff}
+#game #battle-playback{top:auto;bottom:-29px;left:auto;right:0;transform:none;width:80px}
+#game #battle-fast{background:#141c30;border:1px solid #afa2c6;font-size:10px;min-height:23px}
+#game #command-window.skill-grid,#game #command-window.items-open{top:auto;width:36%;max-height:45%;overflow:auto;padding:10px}
+#game #command-window.skill-grid .command{font-size:clamp(8px,1vw,14px);min-height:28px}
+#cinematic-damage{position:absolute;inset:0;pointer-events:none;z-index:40}
+.damage-pop{position:absolute;transform:translate(-50%,-70%);text-align:center;color:#fff;font-family:Arial,sans-serif;filter:drop-shadow(0 3px 0 #070611)}
+.damage-pop strong{display:block;font-size:clamp(24px,5vw,76px);font-weight:1000;font-style:italic;line-height:.95;-webkit-text-stroke:2px #191026;text-shadow:2px 3px #000,0 0 13px #bb71ff}
+.damage-pop.critical strong{color:#ffe18a;font-size:clamp(32px,6.5vw,98px);text-shadow:3px 4px #000,0 0 19px #c06aff}
+.damage-pop small{display:block;font-size:clamp(12px,2vw,28px);font-weight:900;font-style:italic;color:#ffe18a;text-shadow:2px 2px #30162b;white-space:nowrap}
+@media(max-width:650px){#game .cinematic-enemy.primary{height:43px}#game .cinematic-enemy{width:34px;height:26px}#game .enemy-emblem{font-size:16px}#game #status-window.party-status{gap:5px;width:20%}#game .party-card{gap:3px;padding:2px}#game .party-card .battle-portrait{border-width:2px}#game #battle-message{left:40%;right:22%;font-size:9px;padding:4px}#game .cinematic-hp-track{height:5px}#game #battle-playback{bottom:-22px}#game #battle-fast{min-height:19px;font-size:8px}}
+
+/* Battle areas share a fixed viewport: the party occupies the upper right,
+   the command wheel the lower right, and the message stays between them. */
+#game.desktop-ui #battle-message,#game #battle-message{left:38%;right:23%;top:3%;width:auto;max-width:none;min-height:0;margin:0;font-size:clamp(10px,1.1vw,17px)}
+#game.desktop-ui #status-window.party-status,#game #status-window.party-status{inset:5% 1.5% auto auto;transform:none;width:19%;max-width:19%;height:48%;display:flex;flex-direction:column;justify-content:flex-start;gap:2%;overflow:hidden}
+#game.desktop-ui #status-window:has(.party-card:nth-child(4)){width:19%;max-width:19%}
+#game.desktop-ui .party-card,#game .party-card{box-sizing:border-box;flex:1 1 0;min-height:0;max-height:25%;max-width:none;width:100%;grid-template-columns:minmax(0,35%) minmax(0,1fr);gap:5%;padding:2%;border:0;border-radius:100px 4px 4px 100px}
+#game.desktop-ui .party-card .battle-portrait,#game .party-card .battle-portrait{width:100%;height:auto;max-height:100%;aspect-ratio:1;object-fit:cover;border-radius:50%;grid-row:auto}
+#game.desktop-ui .party-card .card-heading,#game .party-card .card-heading{font-size:clamp(9px,1.05vw,15px);margin:0 0 3px;line-height:1.1}
+#game.desktop-ui .party-card .mini-row,#game .party-card .mini-row{font-size:clamp(8px,.85vw,12px);line-height:1.1;gap:4px}
+#game.desktop-ui .party-card .meter,#game .party-card .meter{height:5px;margin:2px 0 3px}
+#game.desktop-ui #command-window.cinematic-wheel,#game #command-window.cinematic-wheel{position:absolute;inset:auto 2% 4% auto;transform:none;width:31%;height:36%;min-height:0;max-height:none;padding:0;overflow:visible;border-radius:100% 100% 8% 8%}
+#game.desktop-ui #command-window.cinematic-wheel #command-list,#game #command-window.cinematic-wheel #command-list{position:absolute;inset:0;display:block;padding:0;overflow:visible}
+#game.desktop-ui #command-window.cinematic-wheel .command,#game #command-window.cinematic-wheel .command{position:absolute;inset:auto;width:29%;height:31%;min-height:0;margin:0;padding:2px;writing-mode:horizontal-tb;transform:none;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:clamp(9px,1vw,15px);line-height:1.1;white-space:normal;text-align:center}
+#game #command-window.cinematic-wheel .command[data-action=attack]{left:35.5%!important;top:3%!important}
+#game #command-window.cinematic-wheel .command[data-action=magic]{left:5%!important;top:25%!important}
+#game #command-window.cinematic-wheel .command[data-action=item]{right:5%!important;top:25%!important}
+#game #command-window.cinematic-wheel .command[data-action=auto]{left:5%!important;bottom:5%!important}
+#game #command-window.cinematic-wheel .command[data-action=run]{right:5%!important;bottom:5%!important}
+#game #command-window.cinematic-wheel .command[data-action=special]{left:35.5%!important;bottom:5%!important}
+#game.desktop-ui #battle-playback,#game #battle-playback{position:absolute;top:auto;bottom:-2px;left:auto;right:0;transform:translateY(100%);width:72px}
+#game.desktop-ui #command-window.skill-grid,#game.desktop-ui #command-window.items-open,#game #command-window.skill-grid,#game #command-window.items-open{inset:auto 2% 6% auto;transform:none;width:32%;height:auto;min-height:0;max-height:39%;padding:8px;overflow:auto}
+@media(max-width:650px){#game.desktop-ui #status-window.party-status,#game #status-window.party-status{width:22%;max-width:22%;height:45%}#game.desktop-ui #command-window.cinematic-wheel,#game #command-window.cinematic-wheel{width:40%;height:34%;bottom:6%}#game #battle-message{left:37%;right:24%}#game.desktop-ui .party-card .mini-row,#game .party-card .mini-row{font-size:8px}}
