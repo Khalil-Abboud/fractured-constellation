@@ -107,27 +107,30 @@ async function reconcileScore(){
  const d=scoreDirector;
  if(!d.requested||!audio.on||state.mode==='title')return;
  syncScoreScene();
- const key=contextualTheme(d.requested);if(key===d.key)return;
- const serial=++d.serial,session=state.session;d.key=key;
- if(d.active?.key===key&&d.active.session===session)return;
+ const key=contextualTheme(d.requested);
+ const isBattle=key==='skirmish'||key==='boss-battle';
+ const encounter=isBattle?state.battle:null;
+ if(key===d.key&&encounter===d.encounter)return;
+ const serial=++d.serial,session=state.session;d.key=key;d.encounter=encounter;
+ if(d.active?.key===key&&d.active.session===session&&d.active.encounter===encounter)return;
  try{
   if(!await unlockAudio()||serial!==d.serial){if(serial===d.serial)d.key=null;return}
   const entry=key==='sanctum'?{buffer:await decodeFinaleAudio('sanctum',audio.ctx)}:await loadGameTheme(key);
   if(serial!==d.serial||!audio.on||session!==state.session)return;
   if(!entry.buffer)throw Error('Cannot decode '+key);
-  if(contextualTheme(d.requested)!==key){d.key=null;return reconcileScore()}
+  if(contextualTheme(d.requested)!==key||(isBattle&&state.battle!==encounter)){d.key=null;return reconcileScore()}
   originalScore.stop();fadeGameTheme();
   const ac=audio.ctx,now=ac.currentTime,source=ac.createBufferSource(),gain=ac.createGain();
   source.buffer=entry.buffer;source.loop=key!=='inn-rest';
   // The original throne recording uses its original trim and level.
   source.loopStart=entry.loopSeconds?Math.min(.0345,Math.max(0,source.buffer.duration-entry.loopSeconds)):0;
   source.loopEnd=entry.loopSeconds?Math.min(source.buffer.duration,entry.loopSeconds+source.loopStart):source.buffer.duration;
-  const offset=key==='inn-rest'||key==='voyage'?0:(d.positions.get(key)||0)%(source.loopEnd-source.loopStart);
+  const offset=isBattle||key==='inn-rest'||key==='voyage'?0:(d.positions.get(key)||0)%(source.loopEnd-source.loopStart);
   source.playbackRate.value=musicTempoRate;gain.gain.setValueAtTime(0,now);
   gain.gain.linearRampToValueAtTime(key==='sanctum'?1.12:.83,now+.65);
   source.connect(gain);gain.connect(audio.musicGain);source.onended=()=>{source.disconnect();gain.disconnect()};
   source.start(now,source.loopStart+offset);
-  d.active={key,source,gain,session,offset,startedAt:now,rate:musicTempoRate};
+  d.active={key,encounter,source,gain,session,offset,startedAt:now,rate:musicTempoRate};
  }catch(err){
   if(serial!==d.serial||session!==state.session)return;
   console.warn('Soundtrack unavailable',key,err);fadeGameTheme();
