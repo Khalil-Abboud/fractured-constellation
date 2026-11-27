@@ -44,6 +44,7 @@
 #cinematic-damage{position:absolute;inset:0;pointer-events:none;z-index:40}
 .damage-pop{position:absolute;transform:translate(-50%,-70%);text-align:center;color:#fff;font-family:Arial,sans-serif;filter:drop-shadow(0 3px 0 #070611)}
 .damage-pop strong{display:block;font-size:clamp(24px,5vw,76px);font-weight:1000;font-style:italic;line-height:.95;-webkit-text-stroke:2px #191026;text-shadow:2px 3px #000,0 0 13px #bb71ff}
+.damage-pop.healing strong{color:#8aff9d;text-shadow:2px 3px #000,0 0 13px #41c76b}
 .damage-pop.critical strong{color:#ffe18a;font-size:clamp(32px,6.5vw,98px);text-shadow:3px 4px #000,0 0 19px #c06aff}
 .damage-pop small{display:block;font-size:clamp(12px,2vw,28px);font-weight:900;font-style:italic;color:#ffe18a;text-shadow:2px 2px #30162b;white-space:nowrap}
 @media(max-width:650px){#game .cinematic-enemy.primary{height:43px}#game .cinematic-enemy{width:34px;height:26px}#game .enemy-emblem{font-size:16px}#game #status-window.party-status{gap:5px;width:20%}#game .party-card{gap:3px;padding:2px}#game .party-card .battle-portrait{border-width:2px}#game #battle-message{left:40%;right:22%;font-size:9px;padding:4px}#game .cinematic-hp-track{height:5px}#game #battle-playback{bottom:-22px}#game #battle-fast{min-height:19px;font-size:8px}}

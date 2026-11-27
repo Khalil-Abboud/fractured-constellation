@@ -12,7 +12,7 @@ function newHero(name){return{name,level:1,xp:0,hp:baseStats[name].hp,ap:baseSta
 function heroStats(h){const stats={...baseStats[h.name]},factor=1.1**(h.level-1);for(const key of Object.keys(stats))stats[key]=Math.floor(stats[key]*factor+1e-9);return stats}
 function healParty(){state.party.forEach(h=>{const s=heroStats(h);h.hp=s.hp;h.ap=s.ap})}
 function journeyObjective(){ui.objective.textContent=state.scene==='forest'?tr('MISTWOOD · FOLLOW THE NORTH ROAD','غابة الضباب · اتبع الطريق الشمالي'):tr('GREY PASS · BREAK THE CHECKPOINT','الممر الرمادي · تجاوز نقطة التفتيش')}
-function returnToJourney(){state.mode='map';state.keys={};ui.dialogue.classList.add('hidden');ui.battle.classList.add('hidden');ui.map.classList.remove('hidden');state.encounterDistance=0;state.nextEncounter=nextEncounterDistance();state.trail=[];journeyObjective();updatePrompt()}
+function returnToJourney(){state.mode='map';$('stats-button').classList.add('available');state.keys={};ui.dialogue.classList.add('hidden');ui.battle.classList.add('hidden');ui.map.classList.remove('hidden');state.encounterDistance=0;state.nextEncounter=nextEncounterDistance();state.trail=[];journeyObjective();updatePrompt()}
 function showStats(){
  if(!['map','battle','end'].includes(state.mode)||(state.mode==='battle'&&(!state.battle?.kind||state.battle.busy)))return;
  state.statsReturn=state.mode;state.mode='stats';state.keys={};$('stats-title').textContent=tr('Party statistics','إحصائيات الرفاق');$('stats-close').textContent=tr('Close','إغلاق');
@@ -179,7 +179,7 @@ chooseCommand=function(action){
   if(Math.random()<.75){setBattleMessage(tr('The party slips away into the mist.','يفلت الفريق إلى الضباب.'));battleDelay(()=>{state.battle=null;returnToJourney();startMusic('village')},650);renderCommands();return}
   msg=tr('The creatures cut off the escape!','تقطع المخلوقات طريق الهرب!');
  }else if(action==='herb'){
-  state.herbs--;const target=state.party.find(p=>p.hp<=0)||state.party.slice().sort((a,c)=>a.hp/heroStats(a).hp-c.hp/heroStats(c).hp)[0],before=target.hp;target.hp=Math.min(heroStats(target).hp,target.hp+HERB_HEAL);battleSfx('shield');
+  state.herbs--;const target=state.party.find(p=>p.hp<=0)||state.party.slice().sort((a,c)=>a.hp/heroStats(a).hp-c.hp/heroStats(c).hp)[0],before=target.hp;target.hp=Math.min(heroStats(target).hp,target.hp+HERB_HEAL);showBattleHealing(state.party.indexOf(target),target.hp-before);battleSfx('shield');
   msg=tr(name+' uses a healing herb on '+target.name+'. +'+(target.hp-before)+' HP.',name+' يستخدم عشب شفاء على '+(HERO_AR[target.name]||target.name)+'. +'+(target.hp-before)+' صحة.');
  }else if(action==='special'){
   h.hp=Math.min(s.hp,h.hp+16+h.level*4);h.guarding=true;battleSfx('shield');msg=tr(name+' gathers resolve and guards this round.',name+' يستجمع عزيمته ويحتمي هذا الدور.');
@@ -201,7 +201,7 @@ function raidCommand(action){
  b.busy=true;state.battleMenu='main';b.ap-=cost;let msg='';
  if(['attack','auto','starbolt','flare'].includes(action)){const hit=rollDamage(offensivePower(h,action),22);b.enemyHP-=hit.amount;b.heroLunge=-75;b.enemyShake=true;b.magic=['starbolt','flare'].includes(action);battleSfx(b.magic?'magic':'attack');const hits=[{index:0,amount:hit.amount,critical:hit.critical}];if(b.magic)scheduleSkillImpact(hits,SKILLS[action].duration||860);else{triggerEnemyDamageFeedback(hits,{actor:0});if(hit.critical)criticalImpact();flash('#bfa7ff')}msg=(hit.critical?tr('CRITICAL! ','ضربة حرجة! '):'')+tr('Astro strikes Atrox for '+hit.amount+' damage. Atrox does not step back.','يصيب أسترو أتروكس ويسبب '+hit.amount+' ضررًا. لا يتراجع أتروكس.');battleDelay(()=>{b.heroLunge=0;b.enemyShake=false;b.magic=false},390)}
  else if(action==='shield'){b.teamShield={expiresRound:(b.round||1)+1};battleSfx('shield');msg=tr('Orbit Shield forms around Astro.','يتشكل الدرع المداري حول أسترو.')}
- else if(action==='herb'){state.herbs--;b.hp=Math.min(heroStats(h).hp,b.hp+HERB_HEAL);battleSfx('shield');msg=tr('Astro uses a healing herb.','يستخدم أسترو عشب شفاء.')}
+ else if(action==='herb'){state.herbs--;const before=b.hp;b.hp=Math.min(heroStats(h).hp,b.hp+HERB_HEAL);showBattleHealing(0,b.hp-before);battleSfx('shield');msg=tr('Astro uses a healing herb.','يستخدم أسترو عشب شفاء.')}
  else if(action==='special'){battleSfx('menu');msg=tr('ANALYZE — Atrox vastly outmatches Astro.','تحليل — قوة أتروكس تفوق أسترو بفارق هائل.')}
  else if(action==='run'){msg=tr('Atrox has closed every escape route.','أغلق أتروكس كل مسارات الهرب.')}
  b.turn++;b.round=b.turn;setBattleMessage(msg);updateStats();renderCommands();scheduleAtroxTurn();

@@ -16,7 +16,7 @@ function loadGameTheme(key){
  if(themeJobs.has(key))return themeJobs.get(key).promise;
  const script=document.createElement('script'),job={};
  job.promise=new Promise((resolve,reject)=>Object.assign(job,{resolve,reject}));
- themeJobs.set(key,job);script.src='assets/audio/themes/'+key+'.js?v=recurring-combat-1';
+ themeJobs.set(key,job);script.src='assets/audio/themes/'+key+'.js?v=finale-voyage-2';
  script.onerror=()=>job.reject(new Error('Cannot load '+key));
  document.head.append(script);
  job.promise.then(clean,clean);function clean(){themeJobs.delete(key);script.remove()}
@@ -111,7 +111,7 @@ async function reconcileScore(){
   // The original throne recording uses its original trim and level.
   source.loopStart=entry.loopSeconds?Math.min(.0345,Math.max(0,source.buffer.duration-entry.loopSeconds)):0;
   source.loopEnd=entry.loopSeconds?Math.min(source.buffer.duration,entry.loopSeconds+source.loopStart):source.buffer.duration;
-  const offset=key==='inn-rest'?0:(d.positions.get(key)||0)%(source.loopEnd-source.loopStart);
+  const offset=key==='inn-rest'||key==='voyage'?0:(d.positions.get(key)||0)%(source.loopEnd-source.loopStart);
   source.playbackRate.value=musicTempoRate;gain.gain.setValueAtTime(0,now);
   gain.gain.linearRampToValueAtTime(key==='sanctum'?1.12:.83,now+.65);
   source.connect(gain);gain.connect(audio.musicGain);source.onended=()=>{source.disconnect();gain.disconnect()};

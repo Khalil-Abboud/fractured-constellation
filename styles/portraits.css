@@ -11,3 +11,4 @@
 #game :is(#battle-ui,#stats-screen) .battle-portrait:is(.portrait-astro,.portrait-shadow,.shadow-portrait,.portrait-venom,.portrait-michou)::after{
  content:none;display:none
 }
+#game #stats-screen .party-face.battle-portrait{image-rendering:auto}

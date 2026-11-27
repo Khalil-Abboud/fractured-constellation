@@ -131,7 +131,7 @@ function mapRole(e) {
  const name=e.name, key=name.toLowerCase();
  if (mapHeights[key]) return key;
  if (name==='The Beast') return 'abomination';
- if (name==='Commander TMRH') return 'varek';
+ if (name==='TMRH'||name==='Commander TMRH') return 'varek';
  if (name==='Captain Rook') return 'captain';
  if (name==='Captain Darius') return 'darius';
  if (/Guard|Soldier|Legionnaire|Officer|Sergeant|Warden|Archer/.test(name)) return 'soldier';

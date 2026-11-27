@@ -1,23 +1,40 @@
 'use strict';
 // Enemy knowledge, responsive UI, statistics, joystick, buttons, and startup.
 // Encounter knowledge is frozen for a whole battle, then used on later encounters.
-const ENEMY_KNOWLEDGE_KEY='fractured_enemy_knowledge_v1';
+const ENEMY_KNOWLEDGE_KEY='fractured_enemy_knowledge_v2';
 let knownEnemies=new Set(),testKnownEnemies=new Set();
 try{const saved=JSON.parse(localStorage.getItem(ENEMY_KNOWLEDGE_KEY)||'[]');if(Array.isArray(saved))knownEnemies=new Set(saved.filter(x=>typeof x==='string'))}catch(_){}
 function enemyKnowledgeKey(enemy){if(enemy.name==='The Beast')return 'The Abomination';return enemy.name.replace(/\s+(?:[A-D]|\d+)$/,'').trim()}
-function prepareEnemyKnowledge(b){
- if(b.healthKnowledge)return;
- const enemies=b.kind?b.enemies:[{name:'Atrox'}],known=state.devTesting?testKnownEnemies:knownEnemies;
- b.healthKnowledge=enemies.map(e=>known.has(enemyKnowledgeKey(e)));
- enemies.forEach(e=>known.add(enemyKnowledgeKey(e)));
- if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
+function rememberDefeatedEnemies(b){
+ if(!b?.kind)return;
+ const known=state.devTesting?testKnownEnemies:knownEnemies;
+ const previousSize=known.size;
+ for(const enemy of b.enemies){
+  if(enemy.hp<=0)known.add(enemyKnowledgeKey(enemy));
+ }
+ if(!state.devTesting&&known.size!==previousSize){
+  try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
+ }
 }
+function prepareEnemyKnowledge(b){
+ if(!b.healthKnowledge){
+  const enemies=b.kind?b.enemies:[{name:'Atrox'}];
+  const known=state.devTesting?testKnownEnemies:knownEnemies;
+  b.healthKnowledge=enemies.map(e=>known.has(enemyKnowledgeKey(e)));
+ }
+ rememberDefeatedEnemies(b);
+}
+const knowledgePreviousWin=winEncounter;
+winEncounter=function(){
+ rememberDefeatedEnemies(state.battle);
+ return knowledgePreviousWin();
+};
 function revealEnemyHealth(enemy,index,b=state.battle){
- if(!b)return false;prepareEnemyKnowledge(b);const key=enemyKnowledgeKey(enemy),enemies=b.kind?b.enemies:[enemy];
+ if(!b)return false;
+ prepareEnemyKnowledge(b);
+ const key=enemyKnowledgeKey(enemy),enemies=b.kind?b.enemies:[enemy];
  enemies.forEach((candidate,i)=>{if(enemyKnowledgeKey(candidate)===key)b.healthKnowledge[i]=true});
- const known=state.devTesting?testKnownEnemies:knownEnemies;known.add(key);
- if(!state.devTesting)try{localStorage.setItem(ENEMY_KNOWLEDGE_KEY,JSON.stringify([...known]))}catch(_){}
- return true
+ return true;
 }
 function enemyStatusLabels(e){
  const labels=[];
@@ -113,7 +130,7 @@ function canUseStatsRemedy(id){
 }
 
 function partyPixelIcon(kind,muted=false){
- const icon=kind==='coin'?'wallet':kind;
+ const icon=kind==='coin'?'gold-coins':kind;
  return '<img class="party-pixel-icon'+(muted?' muted':'')+'" alt="" src="assets/items/'+statsEscape(icon)+'.png">';
 }
 
