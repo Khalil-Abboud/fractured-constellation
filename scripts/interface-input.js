@@ -4,7 +4,7 @@
 const ENEMY_KNOWLEDGE_KEY='fractured_enemy_knowledge_v1';
 let knownEnemies=new Set(),testKnownEnemies=new Set();
 try{const saved=JSON.parse(localStorage.getItem(ENEMY_KNOWLEDGE_KEY)||'[]');if(Array.isArray(saved))knownEnemies=new Set(saved.filter(x=>typeof x==='string'))}catch(_){}
-function enemyKnowledgeKey(enemy){return enemy.name.replace(/\s+(?:[A-D]|\d+)$/,'').trim()}
+function enemyKnowledgeKey(enemy){if(enemy.name==='The Beast')return 'The Abomination';return enemy.name.replace(/\s+(?:[A-D]|\d+)$/,'').trim()}
 function prepareEnemyKnowledge(b){
  if(b.healthKnowledge)return;
  const enemies=b.kind?b.enemies:[{name:'Atrox'}],known=state.devTesting?testKnownEnemies:knownEnemies;
@@ -112,25 +112,9 @@ function canUseStatsRemedy(id){
  return statsRemedyTargets(item).some(h=>(item.resource==='hp'||h.hp>0)&&h[item.resource]<heroStats(h)[item.resource]);
 }
 
-// Small code-drawn pixel icons keep inventory visuals sharp without external images.
 function partyPixelIcon(kind,muted=false){
- const shapes={
- sword:'<path fill="#263344" d="M18 1h5v5h-2v3h-3v3h-3v3h-3v2h-2v-2H8v-2h2v-3h3V7h3V4h2z"/><path fill="#d8e8ed" d="M19 2h3v3h-2v3h-3v3h-3v3h-3v-3h2V8h3V5h3z"/><path fill="#819fb3" d="M20 5h2v1h-2v3h-3v3h-3v3h-3v-2h3v-3h3V7h3z"/><path fill="#e7bd54" d="M6 11h2v2h2v2h2v2h-2v2H8v-2H6v-2H4v-2h2z"/><path fill="#8e5a2f" d="M6 16h3v2H7v2H5v2H2v-3h2v-2h2z"/><path fill="#f5d875" d="M1 21h4v2H1z"/>',
- staff:'<path fill="#5b361d" d="M13 9h4v3h-2v3h-3v3H9v3H6v2H2v-4h3v-3h3v-3h3v-3h2z"/><path fill="#c28a44" d="M13 10h2v2h-2v3h-3v3H7v3H4v-2h2v-3h3v-3h3z"/><path fill="#e7bd55" d="M12 1h7v2h3v7h-3v3h-7v-2H9V4h3z"/><path fill="#584925" d="M13 3h5v2h2v4h-2v2h-5V9h-2V5h2z"/><path fill="#1c66b7" d="M14 3h4v2h2v4h-3v2h-4V8h-2V5h3z"/><path fill="#70d0f5" d="M14 3h3v2h-3v3h-2V5h2z"/>',
- dagger:'<path fill="#8ea8ba" d="M16 2h6v6h-3v3h-3v3h-3v3H9v-5h3V9h3V6h1z"/><path fill="#e5f1ed" d="M17 3h4v2h-3v3h-3v3h-3v3h-2v-2h3V9h3V6h1z"/><path fill="#e0b951" d="M7 12h2v2h2v2h3v2h-3v2H9v-2H7v-2H5v-2h2z"/><path fill="#875335" d="M7 17h3v2H7v3H3v-4h4z"/>',
- bow:'<path fill="#b88445" d="M6 1h5v2h4v3h3v4h2v5h-2v4h-3v3h-4v2H6v-3h5v-2h3v-4h2v-4h-2V7h-3V4H6z"/><path fill="#ead99c" d="M6 2h1v21H6z"/><path fill="#c3d3dc" d="M1 11h19v2H1zM18 8h2v2h3v3h-3v2h-2v-3h2v-1h-2z"/>',
- armor:'<path fill="#30465b" d="M8 2h8v2h4v2h3v6h-4v10H5V12H1V6h3V4h4z"/><path fill="#809db2" d="M8 3h3v4h3V3h2v2h4v2h2v4h-4v10H6V11H2V7h2V5h4z"/><path fill="#b4c4ca" d="M6 7h3v3h7V7h2v5h-2v2H8v-2H6z"/><path fill="#546d83" d="M8 14h8v2H8zM7 19h10v2H7z"/>',
- helmet:'<path fill="#30465b" d="M9 1h6v3h4v3h2v12h-5v4H8v-4H3V7h2V4h4z"/><path fill="#89a5b6" d="M10 3h4v3h4v3h2v9h-4v-8h-3v12h-2V10H8v8H4V9h2V6h4z"/><path fill="#b6c8ce" d="M11 3h2v17h-2zM6 9h4v2H6zM14 9h4v2h-4z"/>',
- boots:'<path fill="#30465b" d="M4 2h7v12h2v8H1v-7h3zM14 2h7v12h2v8H13v-7h1z"/><path fill="#819eae" d="M5 3h5v12h2v5H2v-4h3zM15 3h5v12h2v5h-8v-4h1z"/><path fill="#b5c6cc" d="M5 3h5v3H5zM15 3h5v3h-5z"/><path fill="#536e82" d="M2 19h10v2H2zM14 19h8v2h-8z"/>',
- gloves:'<path fill="#30465b" d="M3 10h3V4h3v4h1V2h3v6h1V3h3v6h1V5h3v9h-2v4h-2v5H7v-5H5v-3H3z"/><path fill="#87a2b3" d="M4 11h2v3h2V5h1v7h2V3h1v9h3V4h1v9h3V6h1v8h-2v4h-2v4H8v-5H6v-3H4z"/><path fill="#b4c5cb" d="M8 18h8v3H8z"/>',
- coin:'<path fill="#775022" d="M7 1h10v2h4v4h2v10h-2v4h-4v2H7v-2H3v-4H1V7h2V3h4z"/><path fill="#d49b35" d="M7 3h10v2h3v3h1v8h-2v3h-3v2H8v-2H5v-3H3V8h2V5h2z"/><path fill="#ffe39a" d="M8 4h8v2H8zM5 7h3v10H5zM8 18h8v2H8z"/><path fill="#f5c65e" d="M10 7h6v2h-3v7h-3z"/>'
- };
- let body=shapes[kind];
- if(!body){
- const palette={herb:['#4a8e2e','#a3d65a','#315c28'],blue:['#398ebc','#8be6ff','#244b8b'],vital:['#d2ddd4','#fff8d1','#6d9550'],azure:['#5b72d9','#8fe7ff','#44458c'],dawnleaf:['#daa131','#ffe17c','#936523']}[kind]||['#4a8e2e','#a3d65a','#315c28'];
- body='<path fill="'+palette[2]+'" d="M11 7h3v14h-3zM7 17h4v3H7zM14 13h5v3h-5z"/><path fill="'+palette[0]+'" d="M2 8h5v2h3v5H5v-2H2zM14 5h3V2h5v6h-2v3h-6zM3 18h5v-2h3v5H8v2H3zM15 16h4v2h3v4h-6zM8 1h4v3h2v5h-5V6H7V3h1z"/><path fill="'+palette[1]+'" d="M3 9h3v2H3zM17 3h4v2h-4zM9 2h2v4H9zM4 19h4v2H4zM17 18h3v2h-3z"/>';
- }
- return '<svg class="party-pixel-icon'+(muted?' muted':'')+'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" shape-rendering="crispEdges">'+body+'</svg>'
+ const icon=kind==='coin'?'wallet':kind;
+ return '<img class="party-pixel-icon'+(muted?' muted':'')+'" alt="" src="assets/items/'+statsEscape(icon)+'.png">';
 }
 
 function statsBar(label,value,max,kind){
@@ -210,7 +194,7 @@ function useStatsRemedy(id){
  if(state.mode!=='stats'||!canUseStatsRemedy(id))return false;
  const inBattle=state.statsReturn==='battle',b=state.battle;if(inBattle&&(!b?.kind||b.busy))return false;
  const item=REMEDIES[id],targets=statsRemedyTargets(item).filter(h=>item.resource==='hp'||h.hp>0);
- const recovered=targets.map(h=>{const before=h[item.resource];h[item.resource]=Math.min(heroStats(h)[item.resource],before+item.heal);return h.name+' +'+(h[item.resource]-before)+' '+tr(item.resource==='hp'?'HP':'MP',item.resource==='hp'?'صحة':'مانا')});
+ const recovered=targets.map(h=>{const before=h[item.resource];h[item.resource]=Math.min(heroStats(h)[item.resource],before+item.heal);return speakerLabel(h.name)+' +'+(h[item.resource]-before)+' '+tr(item.resource==='hp'?'HP':'MP',item.resource==='hp'?'صحة':'مانا')});
  setRemedyCount(id,remedyCount(id)-1);battleSfx('shield');const message=tr(item.en,item.ar)+' · '+recovered.join(' · ');
  if(inBattle){$('stats-screen').classList.add('hidden');state.mode='battle';state.battleMenu='main';b.keyboardTarget=null;b.busy=true;setBattleMessage(message);renderCommands();updateStats();battleDelay(afterHeroAction,800)}
  else renderPartyStats(message);

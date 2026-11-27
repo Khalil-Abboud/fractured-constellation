@@ -49,3 +49,8 @@
 #game #battle-ui.cinematic .damage-pop.critical strong{font-size:clamp(32px,6.5cqw,98px)}
 #game #battle-ui.cinematic .damage-pop small{font-size:clamp(12px,2cqw,28px)}
 @media(max-width:650px){#game #battle-ui.cinematic #command-window{left:2%;right:24%;height:14%;padding:4px;gap:3px}#game #battle-ui.cinematic #command-list{gap:3px}#game #battle-ui.cinematic .cinematic-enemy,#game #battle-ui.cinematic .cinematic-enemy.primary{padding:3px;gap:3px}#game #battle-ui.cinematic .cinematic-hp-track{height:4px}}
+
+#game #battle-ui.cinematic #command-window.skill-grid .command:has(.skill-motif){
+ flex-direction:row;align-items:center;justify-content:center;gap:.35em;
+}
+#game #battle-ui .skill-motif{width:1.65em;height:1.65em;flex:none;object-fit:contain}

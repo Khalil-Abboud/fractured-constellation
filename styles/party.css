@@ -149,3 +149,6 @@
 #stats-content[data-party-tab=overview][data-party-count="2"] .party-numbers{font-size:17px}
 @container(min-width:1000px){#stats-content[data-party-tab=overview] .party-sheets{grid-template-columns:repeat(var(--party-columns,4),minmax(0,1fr))}}
 @container(max-width:599px){#stats-content[data-party-tab=overview] .party-sheets{grid-template-columns:1fr}}
+
+img.party-pixel-icon{object-fit:contain}
+img.party-pixel-icon.muted{filter:grayscale(1);opacity:.45}

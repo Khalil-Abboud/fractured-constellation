@@ -1,0 +1,17 @@
+#game #market-screen{background:linear-gradient(135deg,#0c1429ef,#151526ed);padding:clamp(5px,2vw,20px)}
+#game #market-screen .stats-wrap{background:#121e30;color:#f5eddb;border:1px solid #9c8351;border-radius:9px;width:min(93%,870px);max-height:97%;padding:clamp(8px,1.5vw,18px);display:flex;flex-direction:column;gap:8px;overflow:auto;font-family:Tahoma,Arial,sans-serif;box-shadow:0 15px 50px #05091399}
+#market-screen header{display:flex;align-items:center;gap:12px;border-bottom:1px solid #514a40;padding-bottom:8px}
+#game #market-title{margin:0;font-size:clamp(17px,2vw,28px);flex:1;text-align:start}
+#market-wallet{margin:0;color:#ffe08d;font-weight:700;white-space:nowrap}
+#market-tabs,#market-party{display:flex;flex-wrap:wrap;gap:5px;margin:0}
+#market-tabs:empty,#market-party:empty,#market-message:empty{display:none}
+#market-screen button[aria-pressed=true]{color:#ffe3a7;background:#493a29;border-color:#d3ad64}
+#game #market-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));align-content:start;overflow-y:auto;min-height:54px;gap:7px;padding:2px;scrollbar-color:#a88550 #162337}
+.merchant-item{display:grid;grid-template-columns:46px 1fr;align-items:center;gap:4px 10px;padding:8px 10px;background:#1c2b40;border:1px solid #35465a;border-radius:5px;text-align:start}
+.merchant-item img{width:44px;height:44px;object-fit:contain}
+.merchant-item small{display:block;font-size:clamp(11px,1.1vw,14px);line-height:1.42;color:#d0d8df}
+.merchant-item strong{font-size:clamp(14px,1.35vw,18px)}
+.merchant-item button{grid-column:2;justify-self:start;background:#3c3540;border:1px solid #bda06a;color:#ffe0a1;border-radius:4px;padding:5px 12px;font:bold 13px Tahoma,Arial;cursor:pointer}
+.merchant-item button:disabled{background:#222b35;color:#aab1b5;border-color:#4b5661;cursor:default}
+#market-message{margin:0;font-size:14px}.merchant-face{display:inline-block;width:23px;height:23px;background-size:cover;border-radius:50%;vertical-align:middle;margin-inline-end:5px}
+@media(max-height:450px){#game #market-screen .stats-wrap{gap:3px;padding:5px 9px}#market-screen header{padding-bottom:3px}.merchant-item img{width:32px;height:32px}.merchant-item{padding:5px}.merchant-face{width:18px;height:18px}}

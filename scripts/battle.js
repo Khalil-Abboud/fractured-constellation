@@ -32,7 +32,15 @@ const skillBeginRound=beginPartyRound;
 beginPartyRound=function(){expireEnemyEffects(state.battle);skillBeginRound()};
 battleGold=function(enemies){return skillPrevious.battleGold(enemies)+enemies.reduce((sum,e)=>sum+(e.stolenGold||0),0)};
 offensivePower=function(h,action){const s=SKILLS[action],stats=heroStats(h);return s?.power?stats[s.kind==='magic'?'magic':'attack']*s.power:stats.attack};
-function skillFx(id,targets=[],allies=[]){const b=state.battle;b.skillFx={id,start:battleNow(),duration:SKILLS[id]?.duration||860,actor:b.kind?b.actor:0,targets,allies}}
+function scheduleSkillImpact(hits,duration){
+ const battle=state.battle;
+ battleDelay(()=>{
+  triggerEnemyDamageFeedback(hits,{actor:-1});
+  if(hits.some(hit=>hit.critical))criticalImpact();
+  battle.enemyShake=true;battleDelay(()=>{battle.enemyShake=false},390);
+ },duration*IMPACT_PHASE);
+}
+function skillFx(id,targets=[],allies=[]){const b=state.battle;b.skillFx={id,start:battleNow(),duration:SKILLS[id]?.duration||860,actor:b.kind?b.actor:0,targets,allies};if(id!=="poisonTick")startHeroActionPose(b.skillFx.actor,b.skillFx.duration)}
 function skillSound(s,id){
  if(!audio.ctx||audio.ctx.state!=='running')return;
  const play=(notes,type='triangle',length=.18,gap=.07,volume=.27)=>notes.forEach((f,i)=>tone(f,length,type,volume,audio.sfxGain,i*gap));
@@ -66,9 +74,9 @@ chooseCommand=function(action){
   if(action==='analysis'){
    prepareEnemyKnowledge(b);if(b.healthKnowledge[0]){setBattleMessage(tr('Atrox’s health is already known.','صحة أتروكس معروفة بالفعل.'));return}if(b.ap<s.cost){setBattleMessage(tr('Not enough mana.','لا توجد مانا كافية.'));return}
    b.ap-=s.cost;b.busy=true;state.battleMenu='main';state.selected=0;skillSound(s,action);const success=Math.random()<s.chance;
-   if(success)revealEnemyHealth({name:'Atrox'},0,b);skillFx(action,[0]);setBattleMessage(success?tr('Astro’s calculations succeed · Atrox HP: '+Math.max(0,b.enemyHP)+' / 800.','نجحت حسابات أسترو · صحة أتروكس: '+Math.max(0,b.enemyHP)+' / 800.'):tr('Astro’s calculations fail. Atrox’s health remains unknown.','فشلت حسابات أسترو. تبقى صحة أتروكس مجهولة.'));renderCommands();updateStats();battleDelay(enemyTurn,950);return
+   if(success)revealEnemyHealth({name:'Atrox'},0,b);skillFx(action,[0]);b.skillFx.failed=!success;setBattleMessage(success?tr('Astro’s calculations succeed · Atrox HP: '+Math.max(0,b.enemyHP)+' / 800.','نجحت حسابات أسترو · صحة أتروكس: '+Math.max(0,b.enemyHP)+' / 800.'):tr('Astro’s calculations fail. Atrox’s health remains unknown.','فشلت حسابات أسترو. تبقى صحة أتروكس مجهولة.'));renderCommands();updateStats();scheduleAtroxTurn();return
   }
-  if(['starbolt','shield','flare'].includes(action)){skillPrevious.chooseCommand(action);if(b.busy)skillFx(action,[0],action==='shield'?[0]:[])}return
+  if(['starbolt','shield','flare'].includes(action)){skillPrevious.chooseCommand(action);if(b.busy)skillFx(action,action==='shield'?[]:[0],action==='shield'?[0]:[])}return
  }
  if(h.ap<s.cost){setBattleMessage(tr('Not enough mana.','لا توجد مانا كافية.'));return}
  const e=b.enemies[state.target],targets=s.all?b.enemies.filter(e=>e.hp>0):e?.hp>0?[e]:[];
@@ -77,7 +85,7 @@ chooseCommand=function(action){
  if(!['heal','shield'].includes(s.kind)&&!targets.length)return;
  if(s.kind==='steal'&&(e.stolen||skillPrevious.battleGold([e])<=0)){setBattleMessage(tr(e.stolen?'This enemy’s purse was already stolen. Choose another action.':'This enemy carries no gold.',e.stolen?'سُرقت نقود هذا العدو بالفعل. اختر أمرًا آخر.':'لا يحمل هذا العدو ذهبًا.'));return}
  if(s.kind==='analyze'&&b.healthKnowledge?.[state.target]){setBattleMessage(tr('This enemy’s health is already known. Choose another action.','صحة هذا العدو معروفة بالفعل. اختر حركة أخرى.'));return}
- h.ap-=s.cost;b.busy=true;state.battleMenu='main';state.selected=0;let detail='',allies=[];skillSound(s,action);if(h.name==='Shadow')startHeroActionPose(b.actor,s.duration||860);
+ h.ap-=s.cost;b.busy=true;state.battleMenu='main';state.selected=0;let detail='',allies=[];skillSound(s,action);
  if(s.kind==='shield'){b.teamShield={expiresRound:b.round+1};allies=state.party.map((p,i)=>p.hp>0?i:-1).filter(i=>i>=0);detail=tr('25% less damage for two complete rounds.','ضرر أقل 25% لجولتين كاملتين.')}
  else if(s.kind==='heal'){const before=healTarget.hp;healTarget.hp=Math.min(heroStats(healTarget).hp,before+Math.floor(heroStats(h).magic*1.5));allies=[state.party.indexOf(healTarget)];detail=tr(healTarget.name+' +'+(healTarget.hp-before)+' HP.',HERO_AR[healTarget.name]+' +'+(healTarget.hp-before)+' صحة.')}
  else if(s.kind==='seal'){targets.forEach(t=>t.sealed={turns:skillBoss(t)?1:2});detail=tr('Special skills sealed; basic attacks remain possible. Bosses resist after one enemy phase.','خُتمت المهارات الخاصة؛ يبقى الهجوم العادي ممكنًا. يقاوم الزعماء بعد مرحلة واحدة للعدو.')}
@@ -88,9 +96,9 @@ chooseCommand=function(action){
   const stats=heroStats(h),results=targets.map(t=>{const power=(s.kind==='magic'?stats.magic:stats.attack)*s.power,hit=rollDamage(power,t.defense*(1-(s.pierce||0))),removed=Math.min(t.hp,hit.amount);t.hp=Math.max(0,t.hp-hit.amount);if(s.poison&&t.hp>0)t.poison={turns:s.poison,damage:Math.max(1,Math.floor(stats.attack*.18))};if(s.weaken&&t.hp>0){const original=t.gravity?.original??t.attack;t.gravity={original,turns:2};t.attack=Math.floor(original*(skillBoss(t)?.85:.75))}return{t,hit,removed}});
   if(s.drain){const before=h.hp;h.hp=Math.min(stats.hp,h.hp+Math.floor(results.reduce((n,r)=>n+r.removed,0)*s.drain));allies=[b.actor];detail=tr(' · Shadow restores '+(h.hp-before)+' HP.',' · يستعيد شادو '+(h.hp-before)+' صحة.')}
   detail=results.map(r=>tr(r.t.name,r.t.ar)+': '+r.hit.amount+(r.hit.critical?tr(' CRIT',' حرجة'):'')+(s.poison&&r.t.hp>0?tr(' + poison',' + سم'):'')+(s.weaken&&r.t.hp>0?tr(' + ATK down',' + خفض الهجوم'):'')).join(' · ')+detail;
-  triggerEnemyDamageFeedback(results.map(r=>({index:b.enemies.indexOf(r.t),amount:r.hit.amount,critical:r.hit.critical})),{actor:b.actor,duration:s.duration||860});if(results.some(r=>r.hit.critical))criticalImpact();b.enemyShake=true;battleDelay(()=>{b.enemyShake=false},390);
+  scheduleSkillImpact(results.map(r=>({index:b.enemies.indexOf(r.t),amount:r.hit.amount,critical:r.hit.critical})),s.duration||860);
  }
- skillFx(action,['heal','shield'].includes(s.kind)?[]:targets.map(t=>b.enemies.indexOf(t)),allies);if(s.kind==='steal')b.skillFx.failed=!e.stolen;setBattleMessage(tr(h.name,HERO_AR[h.name])+' · '+tr(s.en,s.ar)+' — '+detail);renderCommands();updateStats();battleDelay(afterHeroAction,(s.duration||860)+60)
+ skillFx(action,['heal','shield'].includes(s.kind)?[]:targets.map(t=>b.enemies.indexOf(t)),allies);if(s.kind==='steal')b.skillFx.failed=!e.stolen;if(s.kind==='analyze')b.skillFx.failed=!b.healthKnowledge?.[state.target];setBattleMessage(tr(h.name,HERO_AR[h.name])+' · '+tr(s.en,s.ar)+' — '+detail);renderCommands();updateStats();battleDelay(afterHeroAction,(s.duration||860)+60)
 };
 // A stable enemy queue prevents a poison defeat from skipping the following soldier.
 partyEnemyPhase=function(index){
@@ -100,6 +108,13 @@ partyEnemyPhase=function(index){
  if(e.poison?.turns>0){const d=Math.min(e.hp,e.poison.damage),enemyIndex=b.enemies.indexOf(e);e.hp-=d;e.poison.turns--;setBattleMessage(tr(e.name+' suffers '+d+' poison damage.',e.ar+' يتلقى '+d+' ضرر سم.'));skillFx('poisonTick',[enemyIndex]);battleSfx('magic');triggerEnemyDamageFeedback([{index:enemyIndex,amount:d,critical:false}],{actor:-1,duration:360});renderCommands();updateStats();battleDelay(()=>enemyAct(e,index),550)}else enemyAct(e,index)
 };
 function enemyAct(e,index){
+ if(state.mode==='battle'&&e.hp>0&&state.party.some(h=>h.hp>0)){
+  e.attackPoseReady=true;e.attackPoseUntil=0;
+  battleDelay(()=>resolveEnemyAct(e,index),240);return;
+ }
+ resolveEnemyAct(e,index);
+}
+function resolveEnemyAct(e,index){
  const b=state.battle;if(!b||state.mode!=='battle')return;if(e.hp<=0){partyEnemyPhase(index+1);return}const alive=state.party.filter(h=>h.hp>0);if(!alive.length){loseEncounter();return}
  const sealed=e.sealed?.turns>0;if(sealed)e.sealed.turns--;else e.aiTurn=(e.aiTurn||0)+1;
  const pick=()=>alive[Math.floor(Math.random()*alive.length)],hits=[],strike=(h,power)=>{const hit=rollDamage(power,heroStats(h).defense);let damage=shieldedDamage(b,hit.amount);if(h.guarding)damage=Math.max(1,Math.floor(damage*.5));h.hp=Math.max(0,h.hp-damage);triggerHeroDamageFeedback(state.party.indexOf(h),damage,hit.critical);hits.push({h,damage,critical:hit.critical})};let en='',ar='',harmless=false;
@@ -107,8 +122,8 @@ function enemyAct(e,index){
  else if(e.name==='Ironback'){if(e.aiTurn%3===1){en='Ironback lowers its head. A crushing charge is coming!';ar='يخفض الظهر الحديدي رأسه. اندفاع ساحق قادم!';harmless=true}else{const charge=e.aiTurn%3===2;strike(pick(),e.attack*(charge?1.6:1));en=charge?'Ironback uses Crushing Charge.':'Ironback lashes out.';ar=charge?'يستخدم الظهر الحديدي الاندفاع الساحق.':'يضرب الظهر الحديدي.'}}
  else if(e.name==='Glasswing'){if(e.aiTurn%3===1){en='Glasswing spreads its wings. Light gathers across the arena.';ar='يفرد الجناح الزجاجي جناحيه. يتجمع الضوء في أرجاء المدرّج.';harmless=true}else if(e.aiTurn%3===2){alive.forEach(h=>strike(h,e.attack*.95));en='Glasswing uses Shard Rain on the whole party.';ar='يستخدم الجناح الزجاجي مطر الشظايا على الفريق كله.'}else{const h=pick();strike(h,e.attack*.85);h.ap=Math.max(0,h.ap-6);en='Glasswing uses Dusk Siphon and drains 6 mana.';ar='يستخدم الجناح الزجاجي استنزاف الغسق ويسلب 6 مانا.'}}
  else if(e.name==='Michou'){const phase=e.aiTurn%4,weak=alive.slice().sort((a,c)=>a.hp/heroStats(a).hp-c.hp/heroStats(c).hp)[0];if(phase===1){en='Michou marks the weakest companion and draws three arrows.';ar='يحدد ميشو أضعف رفيق ويسحب ثلاثة سهام.';harmless=true}else if(phase===2){strike(weak,e.attack*1.45);en='Michou uses Champion’s Arrow on the marked target.';ar='يستخدم ميشو سهم البطل على الهدف المحدد.'}else if(phase===3){alive.forEach(h=>strike(h,e.attack*.78));en='Michou uses Arrow Rain on the whole party.';ar='يستخدم ميشو مطر السهام على الفريق كله.'}else{strike(pick(),e.attack);en='Michou fires a swift shot and changes position.';ar='يطلق ميشو سهمًا سريعًا ويغير موقعه.'}}
- else if(e.name==='The Abomination'){const phase=e.aiTurn%4;if(phase===1){en='The Abomination draws power into the shard on its chest. Brace for the roar!';ar='يجمع المسخ القوة في شظية صدره. استعدوا للزئير!';harmless=true}else if(phase===2){alive.forEach(h=>strike(h,e.attack*1.3));en='The Abomination uses Shattering Roar on everyone.';ar='يستخدم المسخ الزئير المحطم على الجميع.'}else if(phase===3){strike(pick(),e.attack*1.05);const survivors=alive.filter(h=>h.hp>0);if(survivors.length)strike(survivors[Math.floor(Math.random()*survivors.length)],e.attack*1.05);en='The Abomination uses Twin Rend.';ar='يستخدم المسخ التمزيق المزدوج.'}else{e.hp=Math.min(e.maxHP,e.hp+90);if(!e.echoSummoned){e.echoSummoned=true;b.enemies.push(makeEnemy('Shard Echo','صدى الشظية',90,20,9,'#a794c4',0,8,0))}en='The shard restores 90 health and casts a hostile echo.';ar='تستعيد الشظية 90 صحة وتلقي صدى عدائيًا.';harmless=true}}
- else if(e.name==='Commander Varek'&&e.aiTurn%3===0){strike(pick(),e.attack*1.35);en='Varek uses Commanding Slash.';ar='يستخدم فاريك القطع الآمر.'}
+ else if(e.name==='The Beast'){const phase=e.aiTurn%4;if(phase===1){en='The Beast draws power into the shard on its chest. Brace for the roar!';ar='يجمع المسخ القوة في شظية صدره. استعدوا للزئير!';harmless=true}else if(phase===2){alive.forEach(h=>strike(h,e.attack*1.3));en='The Beast uses Shattering Roar on everyone.';ar='يستخدم المسخ الزئير المحطم على الجميع.'}else if(phase===3){strike(pick(),e.attack*1.05);const survivors=alive.filter(h=>h.hp>0);if(survivors.length)strike(survivors[Math.floor(Math.random()*survivors.length)],e.attack*1.05);en='The Beast uses Twin Rend.';ar='يستخدم المسخ التمزيق المزدوج.'}else{e.hp=Math.min(e.maxHP,e.hp+90);if(!e.echoSummoned){e.echoSummoned=true;b.enemies.push(makeEnemy('Shard Echo','صدى الشظية',90,20,9,'#a794c4',0,8,0))}en='The shard restores 90 health and casts a hostile echo.';ar='تستعيد الشظية 90 صحة وتلقي صدى عدائيًا.';harmless=true}}
+ else if(e.name==='Commander TMRH'&&e.aiTurn%3===0){strike(pick(),e.attack*1.35);en='TMRH uses Commanding Slash.';ar='يستخدم تمره القطع الآمر.'}
  else if(e.name==='Captain Darius'&&e.aiTurn%3===0){alive.forEach(h=>strike(h,e.attack*.85));en='Darius orders a Sweeping Assault on the party.';ar='يأمر داريوس بهجوم كاسح على الفريق.'}
  else if(e.name==='Venom'&&e.aiTurn%3===0){strike(pick(),e.attack*1.45);en='Venom slips behind the line and uses Backstab.';ar='يتسلل فينوم خلف الصف ويستخدم طعنة غادرة.'}
  else if(e.name==='Ash Scorpion'&&e.aiTurn%3===0){const h=pick();strike(h,e.attack*1.25);h.ap=Math.max(0,h.ap-5);en='Ash Scorpion uses Acid Sting: 5 mana drained.';ar='يستخدم عقرب الرماد اللسعة الحمضية: سُلبت 5 مانا.'}
@@ -117,13 +132,14 @@ function enemyAct(e,index){
  else if(e.name==='Ironhide Ogre'&&e.aiTurn%3===0){alive.forEach(h=>strike(h,e.attack*.80));en='Ironhide Ogre smashes the ground beneath the party.';ar='يحطم غول الجلد الحديدي الأرض تحت الفريق.'}
  else if(e.name==='Shard Echo'){const h=pick();strike(h,e.attack);h.ap=Math.max(0,h.ap-3);en='The echo claws at health and mana.';ar='يمزق الصدى الصحة والمانا.'}
  else{strike(pick(),e.attack);en=e.name+' attacks.';ar=e.ar+' يهاجم.'}
+ e.attackPoseReady=harmless;e.attackPoseUntil=harmless?0:combatClock()+480;
  if(hits.some(h=>h.critical))criticalImpact();if(!harmless){battleSfx('enemy');flash('#d75b63')}else battleSfx('magic');setBattleMessage(tr(en,ar)+(hits.length?' '+hits.map(h=>tr(h.h.name,HERO_AR[h.h.name])+': '+h.damage+(h.critical?tr(' CRIT',' حرجة'):'')).join(' · '):''));if(e.gravity&&--e.gravity.turns<=0){e.attack=e.gravity.original;e.gravity=null}renderCommands();updateStats();if(state.party.every(h=>h.hp<=0)){battleDelay(loseEncounter,800);return}battleDelay(()=>partyEnemyPhase(index+1),harmless?1000:800)
 }
 renderTargets=function(){skillPrevious.renderTargets();const b=state.battle,panel=$('enemy-targets');if(!b?.kind||!panel)return;const living=b.enemies.filter(e=>e.hp>0);panel.children&&Array.from(panel.children).forEach((button,i)=>{const e=living[i],labels=[];if(e.poison?.turns>0)labels.push(tr('Poison '+e.poison.turns,'سم '+e.poison.turns));if(e.sealed?.turns>0)labels.push(tr('Seal '+e.sealed.turns,'ختم '+e.sealed.turns));if(e.gravity)labels.push(tr('ATK ↓ '+e.gravity.turns,'هجوم ↓ '+e.gravity.turns));if(e.sabotaged)labels.push(tr('DEF ↓','دفاع ↓'));if(e.stolenGold)labels.push('+'+e.stolenGold+' '+tr('loot','غنيمة'));if(labels.length){const line=document.createElement('small');line.className='enemy-effects';line.textContent=labels.join(' · ');button.appendChild(line)}})};
 navigateBattle=function(key){if(state.battle?.keyboardTarget){const living=state.battle.enemies.map((e,i)=>e.hp>0?i:-1).filter(i=>i>=0),delta=['ArrowUp','ArrowLeft'].includes(key)?-1:1;if(living.length)state.target=living[(living.indexOf(state.target)+delta+living.length)%living.length];battleSfx('menu');renderTargets();return}if(state.battleMenu!=='magic'){skillPrevious.navigateBattle(key);return}const list=battleCommandList(),horizontal=state.lang==='ar'?-1:1,delta={ArrowUp:-2,ArrowDown:2,ArrowLeft:-horizontal,ArrowRight:horizontal}[key]||0;state.selected=(state.selected+delta+list.length)%list.length;battleSfx('menu');renderCommands()};
 showStats=function(){skillPrevious.showStats()};
 // Pixel effects drawn on the battlefield; no downloaded assets or audio required.
-function enemyBattlePoint(b,i){return(b.kind==='boss'?[[139,106],[50,152],[107,184],[52,222]]:[[104,127],[130,210]])[i]||[139,106]}
+function enemyBattlePoint(b,i){return battleEnemyPositions(b)[i]||[146,156]}
 function heroBattlePoint(i){return [[300,139],[367,139],[300,206],[367,206]][i]||[367,206]}
 function fxStar(x,y,r,color,rotation=0){ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.fillStyle=color;ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,rr=i%2?r*.28:r;if(i===0)ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);else ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();ctx.fill();ctx.restore()}
 function drawGalaxyWrath(b,f,t,origin,fade){
@@ -153,7 +169,8 @@ function drawGalaxyWrath(b,f,t,origin,fade){
 function drawSkillEffects(){
  const b=state.battle,f=b?.skillFx;if(!f)return;
  const t=(battleNow()-f.start)/f.duration;if(t<0||t>1){b.skillFx=null;return}
- const origin=heroBattlePoint(f.actor),fade=Math.sin(t*Math.PI),tau=Math.PI*2;
+ if(paintSkillFrame(b,f,t))return;
+ const origin=b.kind?heroBattlePoint(f.actor):[385,196],fade=Math.sin(t*Math.PI),tau=Math.PI*2;
  const line=(points,color,width=2)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke()};
  const ring=(x,y,rx,ry,color,width=2,rotation=0)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.ellipse(x,y,rx,ry,rotation,0,tau);ctx.stroke()};
  const blob=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,tau);ctx.fill()};
@@ -168,7 +185,7 @@ function drawSkillEffects(){
   vertices.forEach(([x,y],i)=>fxStar(x,y,4+fade*3,'#d6faff',t+i));
  }
  f.targets.forEach((i,j)=>{
-  const [x,baseY]=b.kind?enemyBattlePoint(b,i):[117,170],y=baseY-14;
+  const [x,baseY]=b.kind?enemyBattlePoint(b,i):[160,155],y=baseY-14;
   switch(f.id){
    case'shadowSlash':{
     shadowPath(x,y);const q=Math.min(1,t*1.8);
@@ -231,7 +248,7 @@ function drawSkillEffects(){
   }
  });
  f.allies.forEach(i=>{
-  const [x,baseY]=heroBattlePoint(i),y=baseY-15;
+  const [x,baseY]=b.kind?heroBattlePoint(i):[385,196],y=baseY-15;
   if(f.id==='shield'){
    ring(x,y,28,33,'#7199d1',2);for(let k=0;k<3;k++){const a=t*5+k*tau/3;ring(x,y,29,10,'#9dc4f3',1,a);fxStar(x+Math.cos(a)*29,y+Math.sin(a)*25,4,'#fff1bd')}
    const points=Array.from({length:6},(_,k)=>[x+Math.cos(k*tau/6)*22,y+Math.sin(k*tau/6)*26]);line([...points,points[0]],'#e1f4ff',2)
@@ -242,22 +259,52 @@ function drawSkillEffects(){
 }
 drawBattle=function(){skillPrevious.drawBattle();drawSkillEffects();if(state.battle)drawDamageNumbers(state.battle)};
 // A supervised yard lets captives train without abandoning the arena plot.
-function setupTrainingYard(x=76,y=232){state.scene='trainingYard';state.entities=partySprites(x,y);state.entities.push(entity('Yard Warden',91,162,colors.Soldier,{yardTalk:true}));state.encounterDistance=0;state.nextEncounter=nextEncounterDistance();state.trail=[]}
+const yardGate={x:256,y:223};
+const yardFire=furnishing('campfire',118,152,28,25,10);
+const yardRocks=furnishing('boulders',390,213,38,33,19);
+const yardProps=[yardFire,yardRocks];
+function setupTrainingYard(){
+ state.scene='trainingYard';state.entities=partySprites(yardGate.x,203);
+ state.entities.push(entity('Yard Warden',89,192,colors.Soldier,{yardTalk:true}));
+ for(const e of state.entities)e.dir='up';
+ state.encounterDistance=0;state.nextEncounter=nextEncounterDistance();state.trail=[];
+}
 chapterScene=()=>state.scene==='trainingYard'||skillPrevious.chapterScene();
 encounterRegion=function(){return state.scene==='trainingYard'?'east':skillPrevious.encounterRegion()};
 easternMarket=function(){return state.scene==='trainingYard'||skillPrevious.easternMarket()};
-function trainingPoint(){const p=state.player,near=(x,y,r)=>Math.hypot(p.x-x,p.y-y)<r;if(state.scene==='holding'&&near(57,237,25))return'yard';if(state.scene==='trainingYard'){if(near(53,242,25))return'cells';if(near(102,113,27))return'rest';if(near(91,162,32))return'warden'}return null}
+function trainingPoint(){
+ const p=state.player;if(!p)return null;
+ const near=(x,y,r)=>Math.hypot(p.x-x,p.y-y)<r;
+ if(state.scene==='holding'&&near(57,237,25))return 'yard';
+ if(state.scene!=='trainingYard')return null;
+ if(near(yardGate.x,yardGate.y,21))return 'cells';
+ if(near(yardFire.x,yardFire.base,24))return 'rest';
+ const warden=find('Yard Warden');
+ if(warden&&near(warden.x,warden.y,25))return 'warden';
+ return null;
+}
 function arenaTrainingObjective(){ui.objective.textContent=state.beastDefeated?(state.michouState==='joined'?tr('TRAINING YARD · TEST MICHOU / REST / RETURN TO BELLHAVEN','ساحة التدريب · جرّبوا ميشو / استريحوا / عودوا إلى بيلهافن'):tr('TRAINING YARD · TRAIN / REST / RETURN TO BELLHAVEN','ساحة التدريب · تدربوا / استريحوا / عودوا إلى بيلهافن')):tr('TRAINING YARD · FARM / REST / RETURN TO THE CELLS','ساحة التدريب · تدربوا / استريحوا / عودوا لغرف الاحتجاز')}
 chapterObjective=function(){if(state.scene==='trainingYard'){arenaTrainingObjective();return}skillPrevious.chapterObjective();if(state.scene==='holding')ui.objective.textContent+=' · '+tr('WEST DOOR: TRAINING','الباب الغربي: التدريب')};
-blocked=function(x,y){if(state.scene!=='trainingYard')return skillPrevious.blocked(x,y);return x<20||x>492||y<36||y>269||footHitsRect(x,y,64,56,81,39)||footHitsRect(x,y,296,77,44,40)||footHitsRect(x,y,366,184,45,36)||actorsBlockFeet(x,y)};
+blocked=function(x,y){
+ if(state.scene!=='trainingYard')return skillPrevious.blocked(x,y);
+ const feet=y+9;
+ // The angled side fences narrow toward the rear wall.
+ const inset=9+Math.max(0,236-feet)*.5;
+ const front=Math.abs(x-yardGate.x)<53?220:233;
+ if(feet<119||feet>front||x<inset||x>512-inset)return true;
+ return yardProps.some(p=>footHitsRect(x,y,p.x-p.width/2,p.base-p.depth,p.width,p.depth))||actorsBlockFeet(x,y);
+};
 updatePrompt=function(){if(!['trainingYard','holding'].includes(state.scene)){skillPrevious.updatePrompt();return}const point=trainingPoint();if(!point){skillPrevious.updatePrompt();return}ui.prompt.classList.remove('hidden');ui.prompt.textContent={yard:tr('A  Training yard','A  ساحة التدريب'),cells:state.beastDefeated?tr('A  Return to Bellhaven','A  عودوا إلى بيلهافن'):tr('A  Return to holding cells','A  عودوا لغرف الاحتجاز'),rest:tr('A  Rest and save training','A  استريحوا واحفظوا التدريب'),warden:tr('A  Training supplies / equipment','A  مؤن التدريب / تجهيزات')}[point]};
 interact=function(){if(state.mode!=='map'||!trainingPoint()){skillPrevious.interact();return}const point=trainingPoint();if(point==='yard'){setupTrainingYard();resumeChapterMap();startMusic('village')}else if(point==='cells'){if(state.beastDefeated)setupBellhaven(696,205);else{setupHolding();state.player.x=79;state.player.y=237}resumeChapterMap()}else if(point==='rest'){if(state.beastDefeated)restLiberatedYard();else restForArena()}else if(point==='warden')talkYardWarden()};
 async function restLiberatedYard(){const token=state.session;state.mode='cutscene';ui.fade.classList.add('on');await sleep(400);if(token!==state.session)return;healParty();ui.fade.classList.remove('on');saveCheckpoint('bellhaven_freed');battleSfx('shield');const lines=[];if(state.michouState==='joined')lines.push(D('Michou','The bow feels different when no one else chooses the target. I am ready to continue.','يبدو القوس مختلفًا حين لا يختار أحد غيري الهدف. أنا مستعد للمتابعة.'));lines.push(D('Narrator','The whole party recovers all health and mana. Training progress is saved.','يستعيد الفريق كامل الصحة والمانا، ويُحفظ تقدم التدريب.'));await say(lines);if(token===state.session)resumeChapterMap()}
-async function talkYardWarden(){const token=state.session;await say(state.beastDefeated?[D('Yard Warden',state.michouState==='joined'?'The arena belongs to Bellhaven now. Train as long as you need before sailing. Oren left bows here for Michou, and the camp beds are still free.':'The arena belongs to Bellhaven now. Train as long as you need before sailing; the camp beds are still free.',state.michouState==='joined'?'أصبح المدرّج ملكًا لبيلهافن الآن. تدربوا كما تشاؤون قبل الإبحار. ترك أورين أقواسًا هنا لميشو، وما زالت أسرّة المخيم مجانية.':'أصبح المدرّج ملكًا لبيلهافن الآن. تدربوا كما تشاؤون قبل الإبحار؛ وما زالت أسرّة المخيم مجانية.')]:[D('Yard Warden','The western door stays open for training. The creatures in this fenced yard return, and the camp beds cost nothing. Rest there to save your progress before another exhibition.','يبقى الباب الغربي مفتوحًا للتدريب. تعود مخلوقات هذه الساحة المسوّرة، وأسرّة المخيم مجانية. استريحوا هناك لحفظ تقدمكم قبل العرض التالي.')]);if(token!==state.session)return;const choice=await storyChoice(state.beastDefeated?'Prepare for Valdorn':'Prepare for the next exhibition',state.beastDefeated?'استعدوا لفالدور':'استعدوا للعرض التالي',[['Buy remedies','شراء أدوية','supplies'],['Weapons and armor','أسلحة وتجهيزات','gear'],['Return to training','العودة للتدريب','back']]);if(token!==state.session)return;if(choice==='back')resumeChapterMap();else openMarket(choice)}
-talkMarchNpc=async function(npc){if(npc.marchTalk==='arenaKeeper'){await sayAndResume([D('Arena Keeper','The southern door leads to the exhibition. The western door opens onto the training yard. Hunt there, buy equipment from the warden, then use the beds to recover and save.','يقود الباب الجنوبي إلى العرض، ويفتح الباب الغربي على ساحة التدريب. اصطادوا هناك واشتروا التجهيزات من الحارس، ثم استخدموا الأسرّة للتعافي والحفظ.')]);return}await skillPrevious.talkMarchNpc(npc)};
+async function talkYardWarden(){faceConversation(state.player,find("Yard Warden"));const token=state.session;await say(state.beastDefeated?[D('Yard Warden',state.michouState==='joined'?'The arena belongs to Bellhaven now. Train as long as you need before sailing. Oren left bows here for Michou, and you can rest by the campfire for free.':'The arena belongs to Bellhaven now. Train as long as you need before sailing; you can rest by the campfire for free.',state.michouState==='joined'?'أصبح المدرّج ملكًا لبيلهافن الآن. تدربوا كما تشاؤون قبل الإبحار. ترك عزيز أقواسًا هنا لميشو، ويمكنكم الاستراحة عند نار المخيم مجانًا.':'أصبح المدرّج ملكًا لبيلهافن الآن. تدربوا كما تشاؤون قبل الإبحار؛ ويمكنكم الاستراحة عند نار المخيم مجانًا.')]:[D('Yard Warden','The western door stays open for training. The creatures in this fenced yard return, and you can rest by the campfire for free. Rest there to save your progress before another exhibition.','يبقى الباب الغربي مفتوحًا للتدريب. تعود مخلوقات هذه الساحة المسوّرة، والاستراحة عند نار المخيم مجانية. استريحوا هناك لحفظ تقدمكم قبل العرض التالي.')]);if(token!==state.session)return;const choice=await storyChoice(state.beastDefeated?'Prepare for Valdorn':'Prepare for the next exhibition',state.beastDefeated?'استعدوا لفالدور':'استعدوا للعرض التالي',[['Buy remedies','شراء أدوية','supplies'],['Weapons and armor','أسلحة وتجهيزات','gear'],['Return to training','العودة للتدريب','back']]);if(token!==state.session)return;if(choice==='back')resumeChapterMap();else openMarket(choice)}
+talkMarchNpc=async function(npc){if(npc.marchTalk==='arenaKeeper'){await sayAndResume([D('Arena Keeper','The southern door leads to the exhibition. The western door opens onto the training yard. Hunt there, buy equipment from the warden, then rest by the campfire to recover and save.','يقود الباب الجنوبي إلى العرض، ويفتح الباب الغربي على ساحة التدريب. اصطادوا هناك واشتروا التجهيزات من الحارس، ثم استريحوا عند نار المخيم للتعافي والحفظ.')]);return}await skillPrevious.talkMarchNpc(npc)};
 update=function(){const p=state.player,scene=state.scene,x=p?.x,y=p?.y;skillPrevious.update();if(scene==='trainingYard'&&state.mode==='map'&&p){const d=Math.hypot(p.x-x,p.y-y);state.encounterDistance+=d;if(d>0&&!trainingPoint()&&state.encounterDistance>=state.nextEncounter)startEncounter('random')}};
-function drawTrainingYard(){for(let y=0;y<288;y+=16)for(let x=0;x<512;x+=16)tileNoise(x,y,'#3d5143','#506349');rect(14,24,484,10,'#6f6965');rect(14,24,9,255,'#6f6965');rect(489,24,9,255,'#6f6965');rect(14,270,484,10,'#6f6965');for(let x=20;x<493;x+=26)rect(x,17,13,14,'#9a9284');rect(27,234,29,26,'#182132');rect(42,244,15,5,'#d4c39c');rect(64,56,81,39,'#908b73');rect(72,68,65,20,'#6f84a0');rect(78,56,29,8,'#c9c4aa');rect(31,49,119,155,'#bfb38b12');for(const [x,y]of[[318,105],[390,211]]){rect(x-17,y-30,34,38,'#64635b');rect(x-11,y-29,25,10,'#8b8e79')}for(let x=204;x<483;x+=30)rect(x,247,6,4,'#8d9075');state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite);ctx.fillStyle='#e6d6ab';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText(tr('CAMP / SAVE','مخيم / حفظ'),62,44);ctx.fillText(tr('HUNTING GROUND','ساحة الصيد'),297,47);ctx.fillText(tr('CELLS','الزنازين'),28,226)}
-drawMarchInterior=function(){skillPrevious.drawMarchInterior();if(state.scene==='holding'){rect(42,223,14,28,'#14202b');rect(48,231,11,5,'#d2c296');ctx.fillStyle='#eadbb4';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText(tr('TRAIN','تدريب'),61,226)}};
+function drawTrainingYard(){
+ if(!paintScene('yard'))groundMaterial('meadow',0,0,512,288,'#3d5143');
+ const props=yardProps.map(p=>({depth:p.base,paint:()=>paintProp(p.key,p.x,p.base,p.width,p.height)}));
+ drawOutdoorLayers([],null,props);
+}
 draw=function(){if(state.scene!=='trainingYard'){skillPrevious.draw();return}state.time=performance.now();if(['battle','battleBusy'].includes(state.mode)||(state.mode==='stats'&&state.statsReturn==='battle'))drawBattle();else drawTrainingYard();requestAnimationFrame(draw)};
 // First boss now has a persistent safe camp, matching the later automatic checkpoints.
 validCheckpoint=function(s){return skillPrevious.validCheckpoint(s)||(s?.id==='mistwood_camp'&&skillPrevious.validCheckpoint({...s,id:'after_checkpoint'}))};
@@ -290,7 +337,6 @@ function pressB(){
  if(state.mode==='battle'&&state.battle?.auto){stopAutoBattle();return}
  if(state.mode==='battle'&&state.battle?.keyboardTarget&&!state.battle.busy){const previous=state.battle.keyboardTarget;state.battle.keyboardTarget=null;setBattleMessage(previous.message);renderCommands();return}
  if(state.mode==='stats'){closeStats();return}
- if(state.mode==='shop'){closeScoutShop();return}
  if(state.mode==='market'){closeMarket();return}
  if(state.mode==='dev'){closeDev();return}
  if(state.mode==='battle'&&state.battleMenu!=='main'&&!state.battle?.busy){chooseCommand('back');return}
@@ -299,7 +345,7 @@ function pressB(){
 }
 function clearBButton(){const id=bButtonPointer;bButtonPointer=null;bButtonHeld=false;$('back-button').classList.remove('held');if(id!==null)try{$('back-button').releasePointerCapture?.(id)}catch(_){}}
 function syncGameButtons(){const hidden=['title','end','cutscene','battle','battleBusy','dialogue','choice','devAuth'].includes(state.mode);$('game-buttons').classList.toggle('hidden',hidden);$('game-buttons').classList.toggle('raised-controls',['dialogue','choice'].includes(state.mode));$('game-buttons').classList.toggle('menu-controls',['stats','shop','market','dev','battle'].includes(state.mode));$('game-buttons').classList.toggle('battle-controls',state.mode==='battle');$('action-button').disabled=state.mode==='battle'&&!!state.battle?.busy;$('back-button').disabled=state.mode==='battle'&&!!state.battle?.busy;if(state.mode!=='map'){bButtonHeld=false;state.keys.x=false;$('back-button').classList.remove('held')}$('action-button').title=tr('A · Z · interact / confirm','A · Z · تفاعل / تأكيد');$('back-button').title=tr('B · X · back; hold Left Shift to sprint','B · X · رجوع؛ اضغط Shift اليسرى باستمرار للجري')}
-const controlPrevious={update,applyLanguage,reset,clearMovement,updatePrompt,interact,newSceneInteraction,marchInteraction,nearbyEntrance,drawOutdoorLayers};
+const controlPrevious={update,applyLanguage,reset,updatePrompt,interact,newSceneInteraction,marchInteraction,nearbyEntrance,drawOutdoorLayers};
 function outdoorPortals(){
  if(state.scene==='village')return ELARIS_HOMES.map((b,i)=>({...b,id:'home',entrance:villageEntrances[i+1]})).concat([{x:192,y:35,w:130,h:86,door:{x:257},id:'shrine',entrance:villageEntrances[0]}]);
  if(state.scene==='town')return TOWN_BUILDINGS;
@@ -314,10 +360,10 @@ marchInteraction=function(){if(state.scene==='bellhaven'){const b=currentPortal(
 drawOutdoorLayers=function(buildings,paintBuilding,extra=[]){const portals=outdoorPortals(),layers=[...buildings.map(b=>{const r=exteriorArtRect(b);return{depth:r.y+r.h,paint:()=>paintBuilding(b)}}),...state.entities.filter(e=>e.visible).map(e=>{const doorway=portals.find(b=>{const r=exteriorArtRect(b),doorX=b.door?.x??r.x+r.w/2;return inPortal(e,b)&&Math.abs(e.x-doorX)<12&&e.y<=r.y+r.h});return{depth:doorway?exteriorArtRect(doorway).y+exteriorArtRect(doorway).h+.5:e.y+9,paint:()=>drawSprite(e)}}),...extra];layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.paint())};
 updatePrompt=function(){controlPrevious.updatePrompt();if(state.mode!=='map')return;const b=currentPortal();if(!b)return;ui.prompt.classList.remove('hidden');ui.prompt.textContent=tr(b.id==='shrine'?'A  Enter shrine':b.entrance||BELL_HOMES.includes(b)?'A  Try door':'A  Enter building',b.id==='shrine'?'A  ادخل المزار':b.entrance||BELL_HOMES.includes(b)?'A  جرّب الباب':'A  ادخل المبنى')};
 interact=function(){if(state.mode==='map'){const b=currentPortal();if(b&&state.player.y<=b.y+b.h+9){if(state.scene==='village'){if(b.id==='shrine')enterShrine();else showLockedDoor();return}if(state.scene==='town'&&state.townRaidCleared){enterTownBuilding(b.id);return}if(state.scene==='bellhaven'&&b.id!=='arena'){if(BELL_HOMES.includes(b))sayAndResume(missionLines(bellNight()?'The door is barred. Its occupants have gone to bed.':'A family lives here. Their door is locked.',bellNight()?'الباب موصد. ذهب سكانه إلى النوم.':'تسكن عائلة هنا. بابها مقفل.','Narrator'));else enterMarchBuilding(b.id);return}}}controlPrevious.interact()};
-update=function(){syncChamberMusic();controlPrevious.update();syncGameButtons()};
+update=function(){controlPrevious.update();syncGameButtons()};
 applyLanguage=function(){controlPrevious.applyLanguage();$('controls-help').textContent=tr('Move: arrows / WASD · Interact: click the nearby action or press Z · Sprint: hold Left Shift · Battle menus / targets: arrows · Mouse / touch available','الحركة: الأسهم أو WASD · التفاعل: انقر زر الفعل القريب أو اضغط Z · الجري: اضغط Shift اليسرى باستمرار · قوائم القتال / الأهداف: الأسهم · الماوس واللمس متاحان');syncGameButtons()};
 reset=function(){clearBButton();controlPrevious.reset();syncGameButtons()};
-clearMovement=function(){clearBButton();controlPrevious.clearMovement()};
+
 $('back-button').addEventListener('pointerdown',e=>{if(bButtonPointer!==null||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();bButtonPointer=e.pointerId;try{$('back-button').setPointerCapture?.(e.pointerId)}catch(_){}if(state.mode==='map'){bButtonHeld=true;$('back-button').classList.add('held')}else pressB()});
 function releaseB(e){if(e.pointerId===bButtonPointer){if(e.cancelable)e.preventDefault();clearBButton()}}
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('back-button').addEventListener(type,releaseB);
@@ -350,12 +396,12 @@ const REGION_ENEMIES={
 };
 regionalEnemies=function(region=encounterRegion()){const templates=REGION_ENEMIES[region]||REGION_ENEMIES.forest,count=ENCOUNTER_COUNTS[randomInt(0,ENCOUNTER_COUNTS.length-1)],groupFactor=count===4?.80:count===3?.90:1;return Array.from({length:count},()=>{const[name,ar,hp,attack,defense,color,xp,speed,goldMin,goldMax]=templates[randomInt(0,templates.length-1)],variation=.92+Math.random()*.16,e=makeEnemy(name,ar,Math.round(hp*variation*groupFactor),Math.round(attack*variation*groupFactor),defense,color,Math.round(xp*variation*groupFactor),speed,0);return Object.assign(e,{region,goldMin,goldMax})})};
 const BOSS_TUNING={
- 'Commander Varek':{hp:480,attack:40,defense:18,speed:15,xp:135,goldMin:22,goldMax:28},
+ 'Commander TMRH':{hp:480,attack:40,defense:18,speed:15,xp:135,goldMin:22,goldMax:28},
  'Captain Darius':{hp:800,attack:55,defense:25,speed:19,xp:185,goldMin:34,goldMax:42},
  'Venom':{hp:1200,attack:72,defense:32,speed:28,xp:210,goldMin:25,goldMax:35},
  'Ironback':{hp:1650,attack:85,defense:38,speed:22,xp:280,goldMin:50,goldMax:65},
  'Glasswing':{hp:2500,attack:109,defense:46,speed:30,xp:370,goldMin:75,goldMax:90},
- 'The Abomination':{hp:3600,attack:145,defense:56,speed:34,xp:600,goldMin:120,goldMax:145}
+ 'The Beast':{hp:3600,attack:145,defense:56,speed:34,xp:600,goldMin:120,goldMax:145}
 };
 const balancePrevious={startEncounter,startChapterBattle,startMarchBattle,makeEnemy,chooseCommand,drawBody,showStats};
 function tuneBossBattle(){const b=state.battle;if(b?.kind!=='boss')return;b.enemies.forEach(e=>{let tuning=BOSS_TUNING[e.name];if(/^Soldier \d$/.test(e.name))tuning={hp:100,attack:26,defense:11,speed:10,xp:24,goldMin:3,goldMax:5};if(e.name.startsWith('Dawn Soldier'))tuning={hp:180,attack:35,defense:17,speed:14,xp:36,goldMin:5,goldMax:7};if(tuning)Object.assign(e,tuning,{hp:tuning.hp,maxHP:tuning.hp})});renderCommands();updateStats()}
@@ -366,8 +412,17 @@ makeEnemy=function(...args){const e=balancePrevious.makeEnemy(...args);if(e.name
 // Focus supplies limited mana and guard, never free unlimited health recovery.
 chooseCommand=function(action){const b=state.battle;if(b?.keyboardTarget&&!b.busy&&state.mode==='battle'){const previous=b.keyboardTarget;b.keyboardTarget=null;setBattleMessage(previous.message)}if(action!=='special'||!b?.kind){balancePrevious.chooseCommand(action);return}if(b.busy||state.mode!=='battle')return;const h=activeHero();if(h.name!=='Astro')return;const before=h.ap;h.ap=Math.min(heroStats(h).ap,h.ap+8+Math.floor(heroStats(h).magic*.10));h.guarding=true;b.busy=true;state.battleMenu='main';battleSfx('shield');setBattleMessage(tr('Astro focuses: +'+(h.ap-before)+' mana. Guarding this round; no health restored.','يركز أسترو: +'+(h.ap-before)+' مانا. يحتمي هذه الجولة؛ لا يستعيد صحة.'));renderCommands();updateStats();battleDelay(afterHeroAction,800)};
 showStats=function(){balancePrevious.showStats()};
-function battleEnemyPositions(b){if(b.kind==='boss')return[[139,106],[50,152],[107,184],[52,222]];return b.enemies.length===1?[[119,156]]:b.enemies.length===2?[[104,127],[130,210]]:b.enemies.length===3?[[115,106],[60,175],[139,226]]:[[119,98],[52,153],[136,182],[61,231]]}
-enemyBattlePoint=function(b,i){return battleEnemyPositions(b)[i]||[119,156]};
+// Coordinates share the same 512 x 288 space as hit numbers and spell effects.
+const enemyFormations = [
+ [],
+ [[146,156]],
+ [[159,118],[104,201]],
+ [[161,104],[134,163],[83,218]],
+ [[161,99],[176,154],[114,186],[66,225]]
+];
+function battleEnemyPositions(b) {
+ return enemyFormations[Math.min(4,b.enemies.length)];
+}
 drawBody=function(x,y,e){
  const special=['Ash Scorpion','Shard Sentinel','Dusk Harpy','Ironhide Ogre','Gloom Bat','Stone Beetle','Ridge Viper','Ridge Boar','Bog Lizard'];if(!special.includes(e.name)){balancePrevious.drawBody(x,y,e);return}ctx.save();ctx.translate(x,y);
  if(e.name==='Ash Scorpion'){rect(-17,-8,34,15,'#927b59');rect(-13,-14,27,12,e.color);for(let k=0;k<3;k++){line(-12+k*9,-2,-23+k*12,11,'#c9b085',2);line(-12+k*9,-4,-24+k*12,-16,'#c9b085',2)}line(12,-9,25,-22,'#c8a981',3);line(25,-22,20,-36,'#c8a981',3);rect(16,-39,9,7,'#d9cfc0');rect(-28,-18,10,10,'#ac8f65');rect(-29,2,11,10,'#ac8f65');rect(-18,-9,3,3,'#ed806a')}

@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#090b15">
   <title>The Fractured Constellation — Top-down RPG MVP</title>
-  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/base.css?v=inn-rest-2">
   <link rel="stylesheet" href="styles/battle.css">
   <link rel="stylesheet" href="styles/developer.css">
   <link rel="stylesheet" href="styles/desktop.css">
-  <link rel="stylesheet" href="styles/audio.css">
+  <link rel="stylesheet" href="styles/audio.css?v=mixer-1">
   <link rel="stylesheet" href="styles/interface-polish.css?v=compact-help-1">
-  <link rel="stylesheet" href="styles/party.css?v=compact-help-2">
-  <link rel="stylesheet" href="styles/dialogue.css">
-  <link rel="stylesheet" href="styles/portraits.css?v=portraits-1">
+  <link rel="stylesheet" href="styles/party.css?v=item-art-1">
+  <link rel="stylesheet" href="styles/dialogue.css?v=dialogue-overlay-4">
+  <link rel="stylesheet" href="styles/portraits.css?v=party-closeups">
   <link rel="stylesheet" href="styles/cinematic-battle.css?v=13">
-  <link rel="stylesheet" href="styles/battle-layout.css?v=17">
+  <link rel="stylesheet" href="styles/battle-layout.css?v=skill-motifs-1">
+<link rel="stylesheet" href="styles/market.css">
 </head>
 <body>
 <main id="game">
-  <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Game volume</h2><button id="music-settings-close" type="button" aria-label="Close sound settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute sound</button></section>
+  <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Game volume</h2><button id="music-settings-close" type="button" aria-label="Close sound settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><div class="music-volume-row"><label id="score-label" for="score-slider">Music</label><output id="score-value" for="score-slider">100%</output></div><input id="score-slider" type="range" min="0" max="100" step="1" value="100"><div class="music-volume-row"><label id="effects-label" for="effects-slider">Sound effects</label><output id="effects-value" for="effects-slider">100%</output></div><input id="effects-slider" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute sound</button></section>
 
   <header id="topbar"><button id="dev-button" class="dev-corner" type="button" aria-label="Development tools">⚙</button><div id="objective">PROTOTYPE · CHAPTER I</div><div class="top-actions"><button id="stats-button" class="small-button" type="button">Stats</button><button id="music-toggle" class="small-button" type="button" aria-controls="music-panel" aria-expanded="false">Music: On</button><button id="restart" class="small-button" type="button">Restart</button><button id="fullscreen" class="small-button" type="button">Fullscreen</button></div></header>
   <section id="viewport" aria-label="Top-down fantasy role-playing game">
@@ -30,8 +31,7 @@
     <div id="battle-ui" class="layer hidden" aria-live="polite"><div id="battle-message">Atrox blocks the shrine.</div><div id="battle-hero-banner" aria-hidden="true"><div class="battle-portrait portrait-astro"></div><span id="astro-status-name">ASTRO</span><span class="battle-level"><span id="level-label">LV.</span> <strong id="level-text">1</strong></span></div><div id="battle-bottom"><div id="command-window" class="blue-window"><div id="battle-playback" class="hidden"><button id="battle-fast" type="button">HOLD ⏩ ×3</button></div><div id="battle-auto-status" class="hidden" role="status"></div><div id="command-list"></div></div><div id="status-window" class="blue-window"><div class="battle-portrait status-portrait portrait-astro"></div><div class="stat"><span id="hp-label">HP</span><strong id="hp-text">84</strong><div class="meter"><span id="hp-meter" class="hp" style="width:100%"></span></div></div><div class="stat"><span id="ap-label">AP</span><strong id="ap-text">36</strong><div class="meter"><span id="ap-meter" class="ap" style="width:100%"></span></div></div></div></div></div>
     <div id="end-screen" class="layer hidden"><div><p id="end-kicker" class="kicker">Vertical slice complete</p><h2 id="end-title" class="end-title">The Hunt Begins</h2><h3 id="end-epic" class="hidden"></h3><p id="end-copy" class="end-copy">Astro has lost his home. Shadow has found the first trace of his past. Atrox carries the stolen key toward Raymond—and something beyond the stars is listening.</p><p id="end-credit"><span lang="ar" dir="rtl">صُنعت اللعبة بواسطة خليل عبود</span><span lang="en" dir="ltr">Game created by Khalil Abboud</span></p><div class="ending-actions"><button id="replay-finale" class="main-button hidden" type="button">Replay finale</button><button id="return-harbor" class="small-button hidden" type="button">Return to harbor</button><button id="again" class="main-button" type="button">Play Again</button></div></div></div>
     <div id="stats-screen" class="layer hidden" role="dialog" aria-modal="true" aria-labelledby="stats-title"><div class="stats-wrap party-panel"><header class="party-heading"><h2 id="stats-title">Party</h2><span id="stats-gold"></span></header><div id="stats-content" role="tabpanel" tabindex="0" aria-labelledby="party-tab-overview"></div><footer class="party-bottom"><nav id="party-tabs" class="party-tabs" role="tablist" aria-label="Party pages"><button id="party-tab-overview" type="button" role="tab" aria-controls="stats-content" aria-selected="true">Overview</button><button id="party-tab-skills" type="button" role="tab" aria-controls="stats-content" aria-selected="false" tabindex="-1">Skills</button><button id="party-tab-bag" type="button" role="tab" aria-controls="stats-content" aria-selected="false" tabindex="-1">Bag</button></nav><button id="stats-close" class="stats-close" type="button"><kbd>ESC</kbd> Close ×</button></footer></div></div>
-    <div id="shop-screen" class="layer hidden" role="dialog" aria-modal="true" aria-labelledby="shop-title"><div class="stats-wrap"><h2 id="shop-title">Scout · Supplies</h2><p id="shop-wallet"></p><button id="buy-herb" class="small-button" type="button"></button><button id="scout-blue" class="small-button" type="button">Blue herb · 25 gold</button><button id="scout-gear" class="small-button" type="button">Camp equipment</button><p id="shop-message" aria-live="polite"></p><button id="shop-close" class="small-button" type="button">Leave shop</button></div></div>
-    <div id="market-screen" class="layer hidden" role="dialog" aria-modal="true" aria-labelledby="market-title"><div class="stats-wrap"><h2 id="market-title"></h2><p id="market-wallet"></p><div id="market-party" class="menu-tabs"></div><div id="market-list"></div><p id="market-message" aria-live="polite"></p><button id="market-close" class="small-button" type="button">Close</button></div></div>
+    <div id="market-screen" class="layer hidden" role="dialog" aria-modal="true" aria-labelledby="market-title"><div class="stats-wrap"><header><h2 id="market-title"></h2><span id="market-wallet"></span><button id="market-close" class="small-button" type="button">Close</button></header><div id="market-tabs"></div><div id="market-party"></div><div id="market-list"></div><p id="market-message" aria-live="polite"></p></div></div>
 
     <div id="dev-auth-screen" class="layer hidden" role="dialog" aria-modal="true" aria-labelledby="dev-auth-title"><form id="dev-auth-form" class="dev-auth-wrap"><h2 id="dev-auth-title">Prove you’re Khalil</h2><label id="dev-password-label" for="dev-password">Password</label><input id="dev-password" type="password" inputmode="numeric" maxlength="8" autocomplete="off" aria-describedby="dev-auth-error"><p id="dev-auth-error" role="alert"></p><div class="dev-auth-actions"><button id="dev-auth-confirm" class="small-button" type="submit">Unlock</button><button id="dev-auth-cancel" class="small-button" type="button">Cancel</button></div></form></div>
     <div id="dev-screen" class="layer hidden" role="dialog" aria-modal="true" aria-labelledby="dev-title"><div class="stats-wrap"><h2 id="dev-title"></h2><p id="dev-copy" class="stats-tip"></p><div class="dev-panel-actions"><button id="dev-close" class="small-button" type="button">Close</button><button id="skip-text" class="small-button" type="button">Skip text</button></div><div id="dev-gold"></div><p id="dev-gold-message" class="stats-tip" aria-live="polite"></p><div id="dev-levels"></div><p id="dev-level-message" class="stats-tip" aria-live="polite"></p><div id="dev-list" class="dev-grid"></div></div></div>
@@ -50,17 +50,21 @@
 <script src="assets/audio/sanctum-00.js"></script>
 <script src="assets/audio/sanctum-01.js"></script>
 <script src="assets/audio/sanctum-02.js"></script>
-<script src="scripts/core.js?v=shadow-combat-2"></script>
-<script src="scripts/journey.js?v=shadow-combat-2"></script>
-<script src="scripts/asterford.js"></script>
-<script src="scripts/eastern-march.js"></script>
-<script src="scripts/battle.js?v=analysis-17"></script>
-<script src="scripts/finale.js"></script>
-<script src="scripts/battle-controls.js"></script>
-<script src="scripts/developer-tools.js?v=party-tabs-1"></script>
-<script src="scripts/audio-settings.js"></script>
-<script src="scripts/interface-input.js?v=overview-static-1"></script>
-<script src="scripts/cinematic-battle.js?v=17"></script>
+<script src="scripts/visual-art.js?v=army-ranks-1"></script>
+<script src="scripts/interiors.js?v=manor-chest-1"></script>
+<script src="scripts/core.js?v=dialogue-fixed-sprites-1"></script>
+<script src="scripts/journey.js?v=trail-chest-1"></script>
+<script src="scripts/asterford.js?v=inn-rest-2"></script>
+<script src="scripts/eastern-march.js?v=army-ranks-1"></script>
+<script src="scripts/skill-effects.js?v=room-and-battle-3"></script>
+<script src="scripts/battle.js?v=yard-floor-1"></script>
+<script src="scripts/finale.js?v=continuous-score-1"></script>
+<script src="scripts/battle-controls.js?v=elaris-original-audio"></script>
+<script src="scripts/developer-tools.js?v=merchants-score-1"></script>
+<script src="scripts/audio-settings.js?v=mixer-1"></script>
+<script src="scripts/interface-input.js?v=item-art-1"></script>
+<script src="scripts/cinematic-battle.js?v=room-and-battle-3"></script>
+<script src="scripts/soundtrack.js?v=epic-combat-1"></script>
 </body>
 </html>
 

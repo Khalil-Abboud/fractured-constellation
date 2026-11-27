@@ -7,12 +7,10 @@ const stableLevelJump=developmentJump,stableLevelReset=reset;
 developmentJump=function(stage){if(!DEV_STAGES.some(group=>group.points.some(([id])=>id===stage)))return;for(const h of state.party||[])developmentRoster[h.name]=copy(h);stableLevelJump(stage)};
 reset=function(){developmentRoster={};stableLevelReset()};
 
-const campStockPrevious=stockedGearIds,campLanguagePrevious=applyLanguage,campShopPrevious=openScoutShop;
+const campStockPrevious=stockedGearIds;
 stockedGearIds=function(){return state.scene==='forest'?campStockPrevious().filter(id=>GEAR[id].price<=35):campStockPrevious()};
-applyLanguage=function(){campLanguagePrevious();$('scout-blue').textContent=tr('Blue herb · 25 gold','عشبة زرقاء · 25 ذهبًا');$('scout-gear').textContent=tr('Camp weapons and armor','أسلحة ودروع المعسكر')};
-openScoutShop=function(){campShopPrevious();$('scout-blue').disabled=state.gold<25};
-$('scout-blue').addEventListener('click',()=>{if(state.mode!=='shop')return;if(state.gold<25){$('shop-message').textContent=tr('Not enough gold.','لا يوجد ذهب كافٍ.');return}state.gold-=25;state.blueHerbs++;battleSfx('shield');openScoutShop();$('shop-message').textContent=tr('A blue herb was added to the shared pack. Restores 30 mana.','أُضيفت عشبة زرقاء إلى حقيبة الفريق. تستعيد 30 مانا.')});
-$('scout-gear').addEventListener('click',()=>{if(state.mode!=='shop')return;closeScoutShop();openMarket('gear');$('market-title').textContent=tr('Scout · Camp equipment','الكشاف · تجهيزات المعسكر')});
+const merchantLanguagePrevious=applyLanguage;
+applyLanguage=function(){merchantLanguagePrevious();if(state.mode==='market')renderMarket()};
 // Resolve the final renderer at click time; later scripts replace showStats.
 $('stats-button').addEventListener('click',()=>showStats());$('stats-close').addEventListener('click',closeStats);
 // Use physical keys so Z/X/F, WASD and Left Shift work with Arabic, Russian and Caps Lock layouts.
@@ -32,7 +30,7 @@ function endJoystick(e){if(e.pointerId!==joystick.pointerId)return;if(e.cancelab
 for(const event of ['pointerup','pointercancel','lostpointercapture'])$('joystick').addEventListener(event,endJoystick);
 document.addEventListener('pointerup',endJoystick);document.addEventListener('pointercancel',endJoystick);
 for(const event of ['contextmenu','selectstart','dragstart'])$('game').addEventListener(event,e=>e.preventDefault());
-function clearMovement(){state.keys={};resetJoystick()}
+function clearMovement(){state.keys={};resetJoystick();clearBButton()}
 window.addEventListener?.('blur',clearMovement);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMovement()});
 // This gate keeps development shortcuts out of normal play; it is checked at every opening.
 const DEV_PASSWORD_HASH='028f9ee74e7e2480326ecd1f51a75195a6a77f72546c524680d36ffec0550f65';

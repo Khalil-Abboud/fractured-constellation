@@ -35,15 +35,11 @@ const cinematicSoundPrevious=battleSfx;
 battleSfx=function(kind){if(kind==='hit'&&audio.ctx?.state==='running'){impactNoise(.13,.65,1700);tone(95,.19,'triangle',.58,audio.sfxGain);tone(420,.055,'square',.22,audio.sfxGain)}cinematicSoundPrevious(kind)};
 function cinematicEnemies(b){return b.kind?b.enemies:[{name:'Atrox',ar:'أتروكس',hp:b.enemyHP,maxHP:800}]}
 function enemyPortrait(enemy) {
- const icon=document.createElement('canvas');icon.width=40;icon.height=40;icon.className='enemy-emblem';
- const brush=icon.getContext('2d');brush.fillStyle=enemy.color||'#ab91cf';
- if(/Wisp|Echo/.test(enemy.name)) {
-  brush.beginPath();brush.arc(20,21,15,0,Math.PI*2);brush.fill();brush.fillStyle='#fff4be';brush.fillRect(12,16,4,4);brush.fillRect(24,16,4,4);
- } else if(/Hound|Wolf/.test(enemy.name)) {
-  brush.fillStyle='#a68d80';brush.fillRect(11,17,24,15);brush.fillRect(5,11,14,16);brush.fillStyle='#697780';brush.fillRect(6,5,4,9);brush.fillRect(14,5,4,9);brush.fillRect(13,30,4,8);brush.fillRect(29,30,4,8);
- } else {
-  brush.fillRect(11,15,18,17);brush.fillStyle='#d1aa8a';brush.fillRect(13,5,14,12);brush.fillStyle='#68768c';brush.fillRect(12,3,16,5);brush.fillStyle='#34364c';brush.fillRect(11,31,6,8);brush.fillRect(23,31,6,8);
- }return icon;
+ const key=enemyArtKey(enemy.name);
+ const frame=key?enemyFrame(key):heroBattleArt[enemy.name]?.idle;
+ const icon=document.createElement('img');icon.className='enemy-emblem';icon.alt='';
+ icon.style.objectFit='contain';if(frame)icon.src=frame.src;
+ return icon;
 }
 renderTargets=function(){
  const b=state.battle;if(!b)return;prepareEnemyKnowledge(b);let panel=$('enemy-targets');if(!panel){panel=document.createElement('div');panel.id='enemy-targets';ui.battle.appendChild(panel)}
@@ -70,11 +66,16 @@ renderCommands=function(){
  $('command-window').classList.remove('cinematic-wheel');ui.battle.classList.add('cinematic');
  const icons={attack:'⚔',magic:'✦',item:'♜',auto:'⟳',run:'➜',special:'◈'};
  document.querySelectorAll('#command-list .command').forEach(button=>{
-  const action=button.dataset.action;if(!icons[action])return;
+  const action=button.dataset.action;
+  if(SKILLS[action] && state.battleMenu==='magic'){
+   const art=document.createElement('img');art.className='skill-motif';
+   art.alt='';art.src=effectFrames[effectMotifs[action]].src;button.prepend(art);return;
+  }
+  if(!icons[action])return;
   const label=document.createElement('span');label.textContent=button.textContent.replace(/^▶\s*/, '');
   const icon=document.createElement('span');icon.className='command-icon';icon.textContent=icons[action];icon.setAttribute('aria-hidden','true');button.replaceChildren(icon,label);
  });
- const playback=$('battle-playback');$('command-window').appendChild(playback);
+ const playback=$('battle-playback');if(playback.parentElement!==$('command-window'))$('command-window').appendChild(playback);
 };
 triggerEnemyDamageFeedback=function(entries,options){
  const b=state.battle;

@@ -2,32 +2,72 @@
 // Core state, translations, prologue, rendering, and original Elaris chapter.
 const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
 function loadBattleArt(path){const image=typeof Image==='undefined'?null:new Image();if(image)image.src=path;return image}
-const shadowBattleArt={
- idle:loadBattleArt('assets/characters/shadow-idle.png'),
- ready:loadBattleArt('assets/characters/shadow-ready.png'),
- action:loadBattleArt('assets/characters/shadow-action.png')
-};
+function loadHeroBattleArt(name){
+ return Object.fromEntries((name==='atrox'?['idle','ready','action']:['idle','ready','action','fallen']).map(pose=>[pose,loadBattleArt(`assets/characters/${name}-${pose}.png`)]));
+}
+const heroBattleArt={Shadow:loadHeroBattleArt('shadow'),Astro:loadHeroBattleArt('astro'),Michou:loadHeroBattleArt('michou'),Venom:loadHeroBattleArt('venom'),Atrox:loadHeroBattleArt('atrox')};
+const heroBattleHeights={Shadow:{idle:66,ready:61,action:58},Astro:{idle:56,ready:54,action:50},Michou:{idle:55,ready:55,action:55},Venom:{idle:56,ready:54,action:50},Atrox:{idle:86,ready:79,action:72}};
+
+function battleHeroPose(b,actor,down){
+ if(down)return 'idle';
+ if(actor===b.actionPoseActor&&state.time<(b.actionPoseUntil||0))return 'action';
+ return actor===(b.actor??0)&&!b.busy&&state.mode==='battle'?'ready':'idle';
+}
+function drawBattleHero(name,x,y,pose,down,facingRight=false){
+ const fallen=down&&heroBattleArt[name]?.fallen;
+ if(fallen&&imageReady(fallen)){
+  const width=heroBattleHeights[name].idle*(name==='Shadow'?1.00:1.11),height=width*fallen.naturalHeight/fallen.naturalWidth;
+  ctx.save();ctx.translate(x,y+13);if(facingRight)ctx.scale(-1,1);
+  ctx.fillStyle='#1513243d';ctx.beginPath();ctx.ellipse(0,-2,width*.43,2.8,0,0,Math.PI*2);ctx.fill();
+  ctx.drawImage(fallen,-width/2,-height,width,height);ctx.restore();return;
+ }
+ const image=heroBattleArt[name]?.[pose];
+ ctx.save();
+ ctx.translate(x,y);
+ if(image?.complete&&image.naturalWidth){
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+  const height=heroBattleHeights[name][pose],width=height*image.naturalWidth/image.naturalHeight;
+  const actionOffset=name==='Astro'&&pose==='action'?-4:0;
+  const artFacesRight=name==='Michou'||name==='Venom'||name==='Atrox';
+  if(artFacesRight!==facingRight)ctx.scale(-1,1);
+  ctx.drawImage(image,actionOffset-width/2,-height+(name==='Shadow'?16:12),width,height);
+ }else{
+  ctx.scale(1.6,1.6);
+  drawBody(0,0,entity(name,0,0,colors[name],{down}));
+ }
+ ctx.restore();
+}
 // Draw the 512×288 game world on a denser canvas, while preserving every
 // existing map coordinate and interaction zone for sharper fullscreen artwork.
-const LOGICAL_WIDTH=512,LOGICAL_HEIGHT=288,RENDER_SCALE=2;
-function beginRenderFrame(){ctx.setTransform(RENDER_SCALE,0,0,RENDER_SCALE,0,0);ctx.imageSmoothingEnabled=false}
+const LOGICAL_WIDTH=512,LOGICAL_HEIGHT=288,RENDER_SCALE=2,BATTLE_RENDER_SCALE=4;
+function beginRenderFrame(inBattle=false){
+ const scale=inBattle?BATTLE_RENDER_SCALE:RENDER_SCALE;
+ const width=LOGICAL_WIDTH*scale,height=LOGICAL_HEIGHT*scale;
+ if(canvas.width!==width||canvas.height!==height){
+  canvas.width=width;canvas.height=height;
+  canvas.classList.toggle('high-res-battle',inBattle);
+ }
+ ctx.setTransform(scale,0,0,scale,0,0);
+ ctx.imageSmoothingEnabled=false;
+}
 beginRenderFrame();
 const $=id=>document.getElementById(id);
 const ui={title:$('title-screen'),map:$('map-hud'),dialogue:$('dialogue'),speaker:$('speaker'),text:$('dialogue-text'),options:$('dialogue-options'),continue:$('continue'),prompt:$('prompt'),battle:$('battle-ui'),message:$('battle-message'),commands:$('command-list'),end:$('end-screen'),objective:$('objective'),fade:$('fade'),flash:$('flash')};
-const colors={Astro:'#4f8edb',Shadow:'#332a5c',Atrox:'#a44747',Raymond:'#d2ae56',Orin:'#8b684b',Soldier:'#70798d',Villager:'#5c9863'};
+const colors={Astro:'#4f8edb',Shadow:'#332a5c',Atrox:'#a44747',Raymond:'#d2ae56',Aziz:'#8b684b',Soldier:'#70798d',Villager:'#5c9863'};
 const state={mode:'title',scene:'village',entities:[],villageEntities:null,player:null,level:1,keys:{},burning:false,relic:false,time:0,dialogueResolve:null,choiceResolve:null,choiceOptions:[],choiceSelected:0,choiceLocked:false,choiceUnlockTimer:null,battle:null,battleMenu:'main',selected:0,lang:'en'};
 const I18N={
-  en:{kicker:'A classic top-down RPG prototype',title:'The Fractured<br>Constellation',chapter:'Chapter I · Ashes Beneath the Stars',newGame:'New Game',controls:'Move: arrows / WASD · Interact: click nearby action or Z · Sprint: hold Left Shift',restart:'Restart',fullscreen:'Fullscreen',musicOn:'Music: On',musicOff:'Music: Off',prototype:'PROTOTYPE · CHAPTER I',prologue:'PROLOGUE · THE FIRST KEY',talk:'ELARIS · ENTER THE SHRINE',shrine:'ELARIS SHRINE · TALK TO ELDER ORIN',legion:'ELARIS · THE IRON LEGION',battle:'BATTLE · ASTRO VS ATROX',complete:'VERTICAL SLICE COMPLETE',prompt:'A  Talk to Elder Orin',hp:'HP',ap:'AP',level:'LV.',astro:'ASTRO',endKicker:'Vertical slice complete',endTitle:'The Hunt Begins',endCopy:'Astro has lost his home. Shadow has found the first trace of his past. Atrox carries the stolen key toward Raymond—and something beyond the stars is listening.',again:'Play Again'},
-  ar:{kicker:'نموذج أولي للعبة تقمّص أدوار كلاسيكية',title:'الكوكبة<br>المحطمة',chapter:'الفصل الأول · رماد تحت النجوم',newGame:'لعبة جديدة',controls:'الحركة: الأسهم أو WASD · التفاعل: انقر زر الفعل القريب أو Z · الجري: اضغط Shift اليسرى باستمرار',restart:'إعادة',fullscreen:'ملء الشاشة',musicOn:'الموسيقى: تعمل',musicOff:'الموسيقى: متوقفة',prototype:'نموذج أولي · الفصل الأول',prologue:'المقدمة · المفتاح الأول',talk:'إيلاريس · ادخل المزار',shrine:'مزار إيلاريس · تحدث مع الكبير أورين',legion:'إيلاريس · الفيلق الحديدي',battle:'المعركة · أسترو ضد أتروكس',complete:'اكتملت النسخة التجريبية',prompt:'A  تحدث مع الكبير أورين',hp:'الصحة',ap:'الطاقة',level:'المستوى',astro:'أسترو',endKicker:'اكتملت النسخة التجريبية',endTitle:'بدء المطاردة',endCopy:'خسر أسترو موطنه، وعثر شادو على أول أثر من ماضيه. يحمل أتروكس المفتاح المسروق نحو ريموند، وشيء ما خلف النجوم يصغي.',again:'العب مجددًا'}
+  en:{kicker:'A classic top-down RPG prototype',title:'The Fractured<br>Constellation',chapter:'Chapter I · Ashes Beneath the Stars',newGame:'New Game',controls:'Move: arrows / WASD · Interact: click nearby action or Z · Sprint: hold Left Shift',restart:'Restart',fullscreen:'Fullscreen',musicOn:'Music: On',musicOff:'Music: Off',prototype:'PROTOTYPE · CHAPTER I',prologue:'PROLOGUE · THE FIRST KEY',talk:'ELARIS · ENTER THE SHRINE',shrine:'ELARIS SHRINE · TALK TO ELDER AZIZ',legion:'ELARIS · THE IRON LEGION',battle:'BATTLE · ASTRO VS ATROX',complete:'VERTICAL SLICE COMPLETE',prompt:'A  Talk to Elder Aziz',hp:'HP',ap:'AP',level:'LV.',astro:'ASTRO',endKicker:'Vertical slice complete',endTitle:'The Hunt Begins',endCopy:'Astro has lost his home. Shadow has found the first trace of his past. Atrox carries the stolen key toward Raymond—and something beyond the stars is listening.',again:'Play Again'},
+  ar:{kicker:'نموذج أولي للعبة تقمّص أدوار كلاسيكية',title:'الكوكبة<br>المحطمة',chapter:'الفصل الأول · رماد تحت النجوم',newGame:'لعبة جديدة',controls:'الحركة: الأسهم أو WASD · التفاعل: انقر زر الفعل القريب أو Z · الجري: اضغط Shift اليسرى باستمرار',restart:'إعادة',fullscreen:'ملء الشاشة',musicOn:'الموسيقى: تعمل',musicOff:'الموسيقى: متوقفة',prototype:'نموذج أولي · الفصل الأول',prologue:'المقدمة · المفتاح الأول',talk:'إيلاريس · ادخل المزار',shrine:'مزار إيلاريس · تحدث مع العجوز عزيز',legion:'إيلاريس · الفيلق الحديدي',battle:'المعركة · أسترو ضد أتروكس',complete:'اكتملت النسخة التجريبية',prompt:'A  تحدث مع العجوز عزيز',hp:'الصحة',ap:'الطاقة',level:'المستوى',astro:'أسترو',endKicker:'اكتملت النسخة التجريبية',endTitle:'بدء المطاردة',endCopy:'خسر أسترو موطنه، وعثر شادو على أول أثر من ماضيه. يحمل أتروكس المفتاح المسروق نحو رايموند، وشيء ما خلف النجوم يصغي.',again:'العب مجددًا'}
 };
-const AR_SPEAKER={'Raymond':'ريموند','Atrox':'أتروكس','Narrator':'الراوي','Elder Orin':'الكبير أورين','Astro':'أسترو','Legion Soldier':'جندي الفيلق','Shadow':'شادو','Mira':'ميرا','Tomas':'توماس','Child':'طفل'};
+const AR_SPEAKER={'Raymond':'رايموند','Atrox':'أتروكس','Narrator':'الراوي','Elder Aziz':'العجوز عزيز','Astro':'أسترو','Legion Soldier':'جندي الفيلق','Shadow':'شادو','Mira':'ميرا','Tomas':'توماس','Child':'طفل'};
 const AR_TEXT={
   "Commander Atrox. The village of Elaris is hiding an object beneath its shrine.":"أيها القائد أتروكس، تخفي قرية إيلاريس شيئًا تحت مزارها.",
   "You want the object recovered. Why send a legion?":"تريد استعادة ذلك الشيء. لماذا ترسل فيلقًا كاملًا؟",
   "Because the villagers have protected it for generations. People mistake long possession for rightful ownership.":"لأن القرويين يحمونه منذ أجيال. يظن الناس أن امتلاك الشيء طويلًا يمنحهم الحق فيه.",
   "And if they resist?":"وماذا إن قاوموا؟",
   "Bring me what lies beneath the shrine. The rest is your judgment.":"أحضر لي ما يوجد تحت المزار. وما تبقى أتركه لتقديرك.",
-  "Raymond turned toward an empty throne of black stone.":"استدار ريموند نحو عرش فارغ من الحجر الأسود.",
+  "Raymond turned toward an empty throne of black stone.":"استدار رايموند نحو عرش فارغ من الحجر الأسود.",
   "The lock is weakening, my lord. Tonight, we take the first key.":"القفل يضعف يا سيدي. الليلة سنأخذ المفتاح الأول.",
   "Astro. You have been staring through that lens since sunrise.":"أسترو، أنت تحدق عبر تلك العدسة منذ شروق الشمس.",
   "Incorrect. I stopped twice to recalibrate it and once because my left eye began producing duplicate stars.":"غير صحيح. توقفت مرتين لإعادة معايرتها، ومرة لأن عيني اليسرى بدأت ترى النجوم مزدوجة.",
@@ -42,7 +82,7 @@ const AR_TEXT={
   "Men who arrive with torches rarely care what they find.":"الرجال الذين يصلون حاملين المشاعل نادرًا ما يهتمون بما سيجدونه.",
   "Search every building. Break the shrine seal.":"فتشوا كل مبنى. حطموا ختم المزار.",
   "Doors splintered. Flames climbed the roofs as the legion closed around the shrine.":"تحطمت الأبواب وارتفعت النيران فوق الأسطح بينما أحاط الفيلق بالمزار.",
-  "When Elder Orin blocked the shrine steps, a legion blade struck him down.":"عندما وقف الكبير أورين أمام درجات المزار، أسقطته ضربة من سيف أحد جنود الفيلق.",
+  "When Elder Aziz blocked the shrine steps, a legion blade struck him down.":"عندما وقف العجوز عزيز أمام درجات المزار، أسقطته ضربة من سيف أحد جنود الفيلق.",
   "Stop! The shrine predates the entire Brotherhood of Dawn. You have no idea what you are opening.":"توقفوا! هذا المزار أقدم من أخوية الفجر كله. أنتم لا تعرفون ما الذي تحاولون فتحه.",
   "Step aside, scholar.":"ابتعد عن الطريق أيها الباحث.",
   "What will Astro do?":"ماذا سيفعل أسترو؟",
@@ -63,20 +103,20 @@ const AR_TEXT={
   "A man who could not protect his own village is no threat to us.":"رجل لم يستطع حماية قريته لا يشكل أي تهديد لنا.",
   "Look at him. A coward who begs on his knees is no threat to us. Leave him here.":"انظروا إليه. جبان يتوسل على ركبتيه لن يشكل خطرًا علينا. اتركوه هنا.",
   "The door is locked. Whoever lives here has barred it from inside.":"الباب مقفل. يبدو أن من في الداخل أغلقه بإحكام.",
-  "Elder Orin is inside the shrine. He asked for you this morning.":"الكبير أورين داخل المزار. لقد سأل عنك هذا الصباح.",
-  "If you are looking for Elder Orin, he is beside the shrine. He has been waiting for you.":"إن كنت تبحث عن الكبير أورين، فهو بجانب المزار. كان ينتظرك.",
+  "Elder Aziz is inside the shrine. He asked for you this morning.":"العجوز عزيز داخل المزار. لقد سأل عنك هذا الصباح.",
+  "If you are looking for Elder Aziz, he is beside the shrine. He has been waiting for you.":"إن كنت تبحث عن العجوز عزيز، فهو بجانب المزار. كان ينتظرك.",
   "My chickens refuse to go near your telescope. I think they find it judgmental.":"دجاجاتي ترفض الاقتراب من منظارك. أظن أنها تشعر بأنه يحكم عليها.",
   "Astro, are stars really holes in the sky? Mira says I should stop asking.":"أسترو، هل النجوم ثقوب حقيقية في السماء؟ تقول ميرا إن عليّ التوقف عن السؤال.",
   "The north road has been too quiet today. Even the traders avoided it.":"الطريق الشمالي هادئ أكثر من اللازم اليوم. حتى التجار تجنبوه.",
   "A heavy crash rolled through the stone chamber. Dust fell from the ceiling.":"دوّى ارتطام عنيف في الحجرة الحجرية، وتساقط الغبار من السقف.",
   "That was not thunder.":"لم يكن ذلك رعدًا.",
   "Outside. Now.":"إلى الخارج. الآن.",
-  "Astro and Elder Orin reached the square only moments before armored figures appeared on the north road.":"وصل أسترو والكبير أورين إلى الساحة قبل لحظات فقط من ظهور رجال مدرعين على الطريق الشمالي.",
+  "Astro and Elder Aziz reached the square only moments before armored figures appeared on the north road.":"وصل أسترو والعجوز عزيز إلى الساحة قبل لحظات فقط من ظهور رجال مدرعين على الطريق الشمالي.",
   "Do not move. I can calculate the safest way to—":"لا تتحرك. أستطيع حساب الطريقة الأكثر أمانًا لكي—",
   "Listen. The constellation was never a crown.":"اسمعني. لم تكن الكوكبة تاجًا قط.",
   "Save your strength. Please.":"احتفظ بقوتك، أرجوك.",
   "It was a lock. Find the missing star... before they find the door.":"لقد كانت قفلًا. اعثر على النجمة المفقودة... قبل أن يعثروا هم على الباب.",
-  "Elder Orin died before Astro could ask what the words meant.":"مات الكبير أورين قبل أن يتمكن أسترو من سؤاله عن معنى كلماته.",
+  "Elder Aziz died before Astro could ask what the words meant.":"مات العجوز عزيز قبل أن يتمكن أسترو من سؤاله عن معنى كلماته.",
   "You are alive.":"أنت على قيد الحياة.",
   "An optimistic interpretation of the available evidence.":"هذا تفسير متفائل للأدلة المتاحة.",
   "Can you stand?":"هل تستطيع الوقوف؟",
@@ -93,7 +133,7 @@ const AR_TEXT={
   "Then keep up.":"إذًا حاول أن تلحق بي.",
   "You do not even know my name.":"أنت لا تعرف حتى اسمي.",
   "Tell me while we walk.":"أخبرني ونحن نسير.",
-  "High above the valley, Raymond opened his eyes before an empty throne.":"في مكان مرتفع فوق الوادي، فتح ريموند عينيه أمام عرش فارغ.",
+  "High above the valley, Raymond opened his eyes before an empty throne.":"في مكان مرتفع فوق الوادي، فتح رايموند عينيه أمام عرش فارغ.",
   "The key is moving, my lord.":"المفتاح يتحرك يا سيدي.",
   "No voice answered him.":"لم يجبه أي صوت.",
   "Yes. Shadow will come to us.":"نعم. سيأتي شادو إلينا.",
@@ -112,7 +152,7 @@ function fireSfx(){if(!audio.ctx||audio.ctx.state!=='running')return;tone(98,.7,
 function battleSfx(kind){if(!audio.ctx||audio.ctx.state!=='running')return;if(kind==='attack'){tone(210,.11,'square',.42,audio.sfxGain);tone(105,.2,'sawtooth',.34,audio.sfxGain,.045)}else if(kind==='hit'){impactNoise(.095,.4,1150);tone(148,.09,'square',.48,audio.sfxGain);tone(72,.16,'sawtooth',.38,audio.sfxGain,.025)}else if(kind==='magic'){tone(392,.3,'sine',.34,audio.sfxGain);tone(783.99,.24,'square',.28,audio.sfxGain,.12)}else if(kind==='shield'){tone(329.63,.34,'sine',.3,audio.sfxGain);tone(493.88,.38,'sine',.26,audio.sfxGain,.08)}else if(kind==='enemy'){tone(82.41,.28,'square',.5,audio.sfxGain);tone(55,.36,'sawtooth',.4,audio.sfxGain,.04)}else if(kind==='defeat'){tone(98,.35,'sawtooth',.5,audio.sfxGain);tone(65.41,.7,'square',.42,audio.sfxGain,.18)}else tone(523.25,.1,'square',.28,audio.sfxGain)}
 async function toggleMusic(){audio.on=!audio.on;if(audio.on){const ready=await unlockAudio();if(ready){tone(659.25,.1,'sine',.16,audio.sfxGain);startMusic(audio.mode||'village')}}else stopMusic();applyLanguage()}
 function textBlip(index){if(!audio.ctx||audio.ctx.state!=='running'||index%2!==0)return;tone(180+(index%5)*12,.045,'square',.22,audio.sfxGain)}
-function applyLanguage(){const t=I18N[state.lang];document.documentElement.dir=state.lang==='ar'?'rtl':'ltr';$('title-kicker').textContent=t.kicker;$('game-title').innerHTML=t.title;$('chapter-subtitle').textContent=t.chapter;$('new-game').textContent=t.newGame;$('controls-help').textContent=t.controls;$('restart').textContent=t.restart;$('fullscreen').textContent=t.fullscreen;$('music-toggle').textContent=audio.on?t.musicOn:t.musicOff;$('astro-status-name').textContent=t.astro;const hpLabel=$('hp-label'),apLabel=$('ap-label');if(hpLabel)hpLabel.textContent=t.hp;if(apLabel)apLabel.textContent=t.ap;$('level-label').textContent=t.level;$('end-kicker').textContent=t.endKicker;$('end-title').textContent=t.endTitle;$('end-copy').textContent=t.endCopy;$('again').textContent=t.again;document.querySelectorAll('.language-button').forEach(b=>b.classList.toggle('selected',b.dataset.lang===state.lang));if(state.mode==='title')setObjective('prototype');if(state.mode==='battle'&&state.battle)renderCommands()}
+function applyLanguage(){if(ui.speaker.dataset.character)ui.speaker.textContent=speakerLabel(ui.speaker.dataset.character);const t=I18N[state.lang];document.documentElement.dir=state.lang==='ar'?'rtl':'ltr';$('title-kicker').textContent=t.kicker;$('game-title').innerHTML=t.title;$('chapter-subtitle').textContent=t.chapter;$('new-game').textContent=t.newGame;$('controls-help').textContent=t.controls;$('restart').textContent=t.restart;$('fullscreen').textContent=t.fullscreen;$('music-toggle').textContent=audio.on?t.musicOn:t.musicOff;$('astro-status-name').textContent=t.astro;const hpLabel=$('hp-label'),apLabel=$('ap-label');if(hpLabel)hpLabel.textContent=t.hp;if(apLabel)apLabel.textContent=t.ap;$('level-label').textContent=t.level;$('end-kicker').textContent=t.endKicker;$('end-title').textContent=t.endTitle;$('end-copy').textContent=t.endCopy;$('again').textContent=t.again;document.querySelectorAll('.language-button').forEach(b=>b.classList.toggle('selected',b.dataset.lang===state.lang));if(state.mode==='title')setObjective('prototype');if(state.mode==='battle'&&state.battle)renderCommands()}
 function entity(name,x,y,color,extra={}){return{name,x,y,color,dir:'down',speed:1.2,visible:true,down:false,...extra}}function find(name){return state.entities.find(e=>e.name===name)}function sleep(ms){return new Promise(r=>setTimeout(r,ms))}function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}function line(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}function tileNoise(x,y,base,alt){rect(x,y,16,16,base);if(((x+y)/16)%3===0){rect(x+3,y+5,2,2,alt);rect(x+11,y+12,2,1,alt)}}
 // Muted natural grass palettes match the detailed buildings and trees. The
 // deterministic flecks break up flat tiles without making the ground noisy.
@@ -124,11 +164,16 @@ const GRASS_PALETTES={
  forest:['#466d49','#3b5f40','#305137','#5e8359'],
  hills:['#758b5a','#667d4f','#566e44','#8fa66e']
 };
-function grassTile(x,y,palette){const tx=Math.floor(x/16),ty=Math.floor(y/16),seed=Math.abs((tx*73856093)^(ty*19349663)),base=seed%5===0?palette[1]:palette[0];rect(x,y,16,16,base);if(seed%3===0){rect(x+3+(seed%5),y+5,2,1,palette[2]);rect(x+11,y+11+(seed%3),1,2,palette[3])}if(seed%7===0){rect(x+7,y+8,1,3,palette[2]);rect(x+8,y+7,1,2,palette[3])}}
-function drawBody(x,y,e){rect(x-5,y-10,10,8,e.color);rect(x-6,y-7,12,11,e.color);rect(x-5,y-14,10,7,'#c99b7b');rect(x-4,y-15,8,3,e.name==='Raymond'?'#efe2b0':e.name==='Astro'?'#24375e':'#292331');rect(x-5,y+4,4,5,'#202331');rect(x+1,y+4,4,5,'#202331');if(e.name==='Atrox'){rect(x-9,y-7,3,12,'#aeb5c4');rect(x+6,y-7,3,12,'#aeb5c4')}if(e.carrying){ctx.fillStyle='#080711';ctx.beginPath();ctx.arc(x+9,y-6,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#a279c5';ctx.stroke()}if(e===state.player){ctx.fillStyle='#f0d579';ctx.beginPath();ctx.moveTo(x-4,y-20);ctx.lineTo(x+4,y-20);ctx.lineTo(x,y-16);ctx.fill()}}
-function drawSprite(e){if(!e.visible)return;const moving=state.mode==='map'&&e===state.player&&Math.hypot(movementVector().x,movementVector().y)>.02,bob=moving?Math.floor(state.time/130)%2:0,x=Math.round(e.x),y=Math.round(e.y+bob);if(e.down){ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/2);drawBody(0,0,e);ctx.restore()}else drawBody(x,y,e)}
+function grassTile(x,y,palette){groundMaterial("meadow",x,y,16,16,palette[0])}
+
+function drawBody(x,y,e){if(paintMapFigure(x,y,e))return;rect(x-5,y-10,10,8,e.color);rect(x-6,y-7,12,11,e.color);rect(x-5,y-14,10,7,'#c99b7b');rect(x-4,y-15,8,3,e.name==='Raymond'?'#efe2b0':e.name==='Astro'?'#24375e':'#292331');rect(x-5,y+4,4,5,'#202331');rect(x+1,y+4,4,5,'#202331');if(e.name==='Atrox'){rect(x-9,y-7,3,12,'#aeb5c4');rect(x+6,y-7,3,12,'#aeb5c4')}if(e.carrying){ctx.fillStyle='#080711';ctx.beginPath();ctx.arc(x+9,y-6,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#a279c5';ctx.stroke()}if(e===state.player){ctx.fillStyle='#f0d579';ctx.beginPath();ctx.moveTo(x-4,y-20);ctx.lineTo(x+4,y-20);ctx.lineTo(x,y-16);ctx.fill()}}
+function drawSprite(e){
+ if(!e.visible)return;
+ if(!paintMapFigure(e.x,e.y,e))drawBody(e.x,e.y,e);
+}
 // Black marble, an empty ceremonial throne, and the stolen star above the dais.
 function drawCitadelChamber(actors=true){
+ if(paintScene("throne")){if(actors)state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite);return}
  rect(0,0,512,288,'#090c18');
  // Flagstones recede towards the raised throne; small inlays make the room readable.
  for(let y=96;y<288;y+=16)for(let x=26;x<486;x+=24){
@@ -191,12 +236,14 @@ function drawCitadelChamber(actors=true){
 }
 function drawThrone(){drawCitadelChamber()}
 function drawRaymondPrivate(){drawCitadelChamber()}
-function syncChamberMusic(){if(['throne','raymond_private','finale_council'].includes(state.scene)&&!['title','end'].includes(state.mode)&&state.entities.some(e=>e.name==='Raymond')&&audio.mode!=='sanctum')startMusic('sanctum')}
 
-function house(x,y,w=76,h=56,burn=false){rect(x,y,w,h,'#86694e');rect(x+5,y+8,w-10,h-8,'#a5855e');ctx.fillStyle='#4a3740';ctx.beginPath();ctx.moveTo(x-9,y+5);ctx.lineTo(x+w/2,y-25);ctx.lineTo(x+w+9,y+5);ctx.fill();rect(x+w/2-7,y+h-21,14,21,'#392d2c');rect(x+12,y+18,14,11,'#d1b36b');if(burn){const f=Math.floor(state.time/180)%2;ctx.fillStyle=f?'#f0a24d':'#c74e3e';ctx.beginPath();ctx.moveTo(x+12,y+2);ctx.lineTo(x+20,y-24-f*5);ctx.lineTo(x+29,y+4);ctx.fill();ctx.beginPath();ctx.moveTo(x+w-29,y+3);ctx.lineTo(x+w-19,y-18+f*4);ctx.lineTo(x+w-9,y+5);ctx.fill()}}
+function house(x,y,w=76,h=56,burn=false){const image=EXTERIOR_ART[burn?'houseBurned':'house'];if(imageReady(image)){ctx.drawImage(image,x-8,y-19,w+16,h+21);return}rect(x,y,w,h,'#86694e');rect(x+5,y+8,w-10,h-8,'#a5855e');ctx.fillStyle='#4a3740';ctx.beginPath();ctx.moveTo(x-9,y+5);ctx.lineTo(x+w/2,y-25);ctx.lineTo(x+w+9,y+5);ctx.fill();rect(x+w/2-7,y+h-21,14,21,'#392d2c');rect(x+12,y+18,14,11,'#d1b36b');if(burn){const f=Math.floor(state.time/180)%2;ctx.fillStyle=f?'#f0a24d':'#c74e3e';ctx.beginPath();ctx.moveTo(x+12,y+2);ctx.lineTo(x+20,y-24-f*5);ctx.lineTo(x+29,y+4);ctx.fill();ctx.beginPath();ctx.moveTo(x+w-29,y+3);ctx.lineTo(x+w-19,y-18+f*4);ctx.lineTo(x+w-9,y+5);ctx.fill()}}
 // Supplied exterior art is shared by each matching building type.  Doors retain
 // their map coordinates while the collision footprint follows the larger facade.
-const EXTERIOR_ART={};
+const EXTERIOR_ART={
+ houseBurned:loadBattleArt('assets/buildings/house-burned.png'),
+ house2Burned:loadBattleArt('assets/buildings/house2-burned.png')
+};
 for(const[key,path]of Object.entries({house:'assets/buildings/house.png',house2:'assets/buildings/house2.png',herbs:'assets/buildings/herb-store.png',inn:'assets/buildings/inn.png',shrine:'assets/buildings/shrine.png',arena:'assets/buildings/arena.png',mayor:'assets/buildings/mayor-manor.png',mayor2:'assets/buildings/mayor2.png',tree:'assets/buildings/tree.png'})){
  const image=typeof Image==='undefined'?null:new Image();if(image)image.src=path;EXTERIOR_ART[key]=image;
 }
@@ -239,43 +286,212 @@ const ELARIS_HOMES=[
 // The shrine artwork ends at y=107. Its old interaction point was y=141,
 // which made a character standing on the visible steps sort behind the facade.
 const ELARIS_SHRINE={x:192,y:18,w:130,h:89,door:{x:257,y:107},depthY:97,art:{x:180,y:4,w:154,h:103,scale:1.14}};
-function drawVillage(){for(let y=0;y<288;y+=16)for(let x=0;x<512;x+=16)grassTile(x,y,GRASS_PALETTES.elaris);rect(212,0,88,288,'#887e69');for(let y=0;y<288;y+=18){rect(220+(y%36?7:0),y+5,12,4,'#746d5e');rect(266,y+11,18,4,'#746d5e')}rect(0,132,512,48,'#887e69');drawOutdoorLayers([...ELARIS_HOMES,ELARIS_SHRINE],b=>b===ELARIS_SHRINE?drawExteriorBuilding(b,'shrine',()=>house(b.x,b.y,b.w,b.h,state.burning)):drawExteriorBuilding(b,b.artKey||'house',()=>house(b.x,b.y,b.w,b.h,state.burning)),[{depth:buildingDepth(ELARIS_SHRINE)-1,paint:()=>{rect(116,40,5,70,'#596170');rect(76,38,86,5,'#596170');line(119,42,151,17,'#9aa5b9',3);ctx.strokeStyle='#c4cbd8';ctx.beginPath();ctx.arc(156,13,12,.2,2.9);ctx.stroke();}}]);if(state.burning)for(let i=0;i<14;i++){const x=(i*83+Math.floor(state.time/14))%512,y=(i*47)%150;rect(x,y,2,2,'#ffb28aaa')}if(state.burning)rect(0,0,512,288,'#73151a32')}
-function drawShrine(){rect(0,0,512,288,'#090b15');rect(26,14,460,274,'#3c4050');rect(38,28,436,260,'#686878');for(let y=38;y<276;y+=18)for(let x=46;x<470;x+=24){rect(x+(y%36?12:0),y,20,14,'#737382');rect(x+(y%36?12:0)+2,y+2,16,10,'#696977')}rect(26,14,460,18,'#272a38');rect(26,14,18,274,'#272a38');rect(468,14,18,274,'#272a38');for(const x of [74,422])for(const y of [68,148]){rect(x-10,y-18,20,44,'#343848');rect(x-14,y-20,28,8,'#555b70');rect(x-14,y+22,28,8,'#292d3c')}rect(190,38,132,58,'#303442');rect(202,46,108,45,'#4c5061');rect(239,54,34,28,'#171925');rect(248,59,16,16,'#9d86c7');ctx.strokeStyle='#a897cf';ctx.lineWidth=2;ctx.beginPath();ctx.arc(256,157,43,0,Math.PI*2);ctx.stroke();const stars=[[256,121],[290,145],[277,188],[234,188],[222,145]];ctx.fillStyle='#d2c5ec';stars.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()});for(let i=0;i<stars.length;i++){const a=stars[i],b=stars[(i+2)%stars.length];line(a[0],a[1],b[0],b[1],'#8e80b5',1)}const flame=Math.floor(state.time/160)%2;for(const x of [132,380]){rect(x-3,87,6,20,'#5a4036');ctx.fillStyle=flame?'#f3b35b':'#d86d45';ctx.beginPath();ctx.moveTo(x-7,88);ctx.lineTo(x,72-flame*4);ctx.lineTo(x+7,88);ctx.fill()}rect(232,263,48,25,'#282b39');rect(240,270,32,18,'#121521');state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite)}
-function drawBattle(){rect(0,0,512,288,'#172d35');rect(0,120,512,168,'#446947');for(let x=0;x<512;x+=18){rect(x,88+(x%36?7:0),22,48,'#234631');ctx.fillStyle='#315b3b';ctx.beginPath();ctx.arc(x+10,82+(x%36?7:0),24,0,Math.PI*2);ctx.fill()}for(let y=142;y<250;y+=18)for(let x=0;x<512;x+=24)rect(x+(y%36?8:0),y,8,3,'#5b7c51');const b=state.battle,shake=b?.enemyShake?((Math.floor(state.time/40)%2)*4-2):0,ax=160+shake,ay=142;ctx.save();if(typeof enemyDamageFlash==='function'&&enemyDamageFlash(b,0))ctx.filter='brightness(4) saturate(0)';rect(ax-19,ay-34,38,35,'#7d333b');rect(ax-23,ay-24,46,40,'#5f2930');rect(ax-14,ay-51,28,20,'#a98268');rect(ax-17,ay-54,34,8,'#505766');rect(ax-30,ay-26,8,38,'#afb6c4');rect(ax+22,ay-26,8,38,'#afb6c4');rect(ax-12,ay+16,10,16,'#242936');rect(ax+3,ay+16,10,16,'#242936');ctx.restore();const heroHit=b?.heroHits?.[0],heroAge=state.time-(heroHit?.start??-10000),heroImpact=heroAge>=0&&heroAge<480;ctx.save();if(heroImpact&&Math.floor(heroAge/65)%2===0)ctx.filter='brightness(4) saturate(0)';const hx=385+(b?.heroLunge||0)+(heroImpact?Math.sin(heroAge/16)*4:0),hy=196;rect(hx-8,hy-20,16,18,colors.Astro);rect(hx-7,hy-31,14,11,'#c99b7b');rect(hx-6,hy-34,12,5,'#24375e');rect(hx-11,hy-4,8,13,'#20283b');rect(hx+3,hy-4,8,13,'#20283b');ctx.restore();if(b?.magic){ctx.strokeStyle='#d7c3ff';ctx.lineWidth=2;for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(ax,ay-10,29+i*7+Math.sin(state.time/90+i)*4,0,Math.PI*2);ctx.stroke()}}}
+function drawElarisBuilding(building){
+ const key=building===ELARIS_SHRINE?'shrine':building.artKey;
+ drawExteriorBuilding(building,state.burning&&key!=='shrine'?key+'Burned':key,
+  ()=>house(building.x,building.y,building.w,building.h,state.burning&&key!=='shrine'));
+}
+let elarisFireGlows;
+function drawElarisFire(){
+ if(!elarisFireGlows)elarisFireGlows=ELARIS_HOMES.map(({art})=>{
+  const x=art.x+art.w/2,y=art.y+art.h*.43;
+  const glow=ctx.createRadialGradient(x,y,4,x,y,82);
+  glow.addColorStop(0,'#ff903540');glow.addColorStop(.45,'#e75a2b20');glow.addColorStop(1,'#e75a2b00');
+  return {x,y,glow};
+ });
+ ctx.save();
+ ctx.globalCompositeOperation='screen';
+ rect(0,0,512,288,'#a5251033');
+ ctx.restore();
+ ctx.save();
+ elarisFireGlows.forEach(({x,y,glow},i)=>{
+  ctx.globalAlpha=.8+Math.sin(state.time/205+i*2)*.2;
+  ctx.fillStyle=glow;ctx.fillRect(x-82,y-82,164,164);
+  for(let j=0;j<9;j++){
+   const rise=((state.time/30+j*11+i*23)%82)/82;
+   ctx.globalAlpha=(1-rise)*.85;
+   rect(x+(j*31%63)-31+Math.sin(rise*7+j)*9,y-rise*73,1+(j%3===0),1,j%3===0?'#ffda82':'#ff7839');
+  }
+ });
+ ctx.restore();
+}
+function drawVillage(){groundMaterial('meadow',0,0,512,288,GRASS_PALETTES.elaris[0]);groundMaterial('dirt',212,0,88,288,'#887e69');groundMaterial('dirt',0,132,512,48,'#887e69');for(const [x,y] of [[12,119],[154,125],[355,129],[489,273]])paintProp('ferns',x,y,18,10);drawOutdoorLayers([...ELARIS_HOMES,ELARIS_SHRINE],drawElarisBuilding,[{depth:buildingDepth(ELARIS_SHRINE)-1,paint:()=>{paintProp('telescope',119,109,86,85)}}]);if(state.burning)drawElarisFire()}
+function drawShrineEntranceWalls(){
+ const wall=[[0,195],[15,195],[15,218],[42,238],[42,235],[63,235],[63,288],[0,288]];
+ ctx.save();
+ ctx.beginPath();
+ for(const mirror of [false,true]){
+  wall.forEach(([x,y],i)=>{
+   const px=mirror?512-x:x;
+   if(i===0)ctx.moveTo(px,y);else ctx.lineTo(px,y);
+  });
+  ctx.closePath();
+ }
+ ctx.clip();
+ paintScene('shrine');
+ ctx.restore();
+}
+function drawShrine(){if(paintScene("shrine")){state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite);drawShrineEntranceWalls();return}rect(0,0,512,288,'#090b15');rect(26,14,460,274,'#3c4050');rect(38,28,436,260,'#686878');for(let y=38;y<276;y+=18)for(let x=46;x<470;x+=24){rect(x+(y%36?12:0),y,20,14,'#737382');rect(x+(y%36?12:0)+2,y+2,16,10,'#696977')}rect(26,14,460,18,'#272a38');rect(26,14,18,274,'#272a38');rect(468,14,18,274,'#272a38');for(const x of [74,422])for(const y of [68,148]){rect(x-10,y-18,20,44,'#343848');rect(x-14,y-20,28,8,'#555b70');rect(x-14,y+22,28,8,'#292d3c')}rect(190,38,132,58,'#303442');rect(202,46,108,45,'#4c5061');rect(239,54,34,28,'#171925');rect(248,59,16,16,'#9d86c7');ctx.strokeStyle='#a897cf';ctx.lineWidth=2;ctx.beginPath();ctx.arc(256,157,43,0,Math.PI*2);ctx.stroke();const stars=[[256,121],[290,145],[277,188],[234,188],[222,145]];ctx.fillStyle='#d2c5ec';stars.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()});for(let i=0;i<stars.length;i++){const a=stars[i],b=stars[(i+2)%stars.length];line(a[0],a[1],b[0],b[1],'#8e80b5',1)}const flame=Math.floor(state.time/160)%2;for(const x of [132,380]){rect(x-3,87,6,20,'#5a4036');ctx.fillStyle=flame?'#f3b35b':'#d86d45';ctx.beginPath();ctx.moveTo(x-7,88);ctx.lineTo(x,72-flame*4);ctx.lineTo(x+7,88);ctx.fill()}rect(232,263,48,25,'#282b39');rect(240,270,32,18,'#121521');state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite)}
+function drawBattle(){drawEncounterBackdrop({});const b=state.battle,shake=b?.enemyShake?((Math.floor(state.time/40)%2)*4-2):0,ax=160+shake,ay=142;ctx.save();if(typeof enemyDamageFlash==='function'&&enemyDamageFlash(b,0))ctx.filter='brightness(4) saturate(0)';const pose=state.time<(b?.attackPoseUntil||0)?'action':b?.attackPoseReady?'ready':'idle';const atroxArt=heroBattleArt.Atrox[pose];if(atroxArt?.complete&&atroxArt.naturalWidth){drawBattleHero('Atrox',ax+(pose==='action'?12:0),ay+20,pose,false,true)}else{rect(ax-19,ay-34,38,35,'#7d333b');rect(ax-23,ay-24,46,40,'#5f2930');rect(ax-14,ay-51,28,20,'#a98268');rect(ax-17,ay-54,34,8,'#505766');rect(ax-30,ay-26,8,38,'#afb6c4');rect(ax+22,ay-26,8,38,'#afb6c4');rect(ax-12,ay+16,10,16,'#242936');rect(ax+3,ay+16,10,16,'#242936');}ctx.restore();const heroHit=b?.heroHits?.[0],heroAge=state.time-(heroHit?.start??-10000),heroImpact=heroAge>=0&&heroAge<480;ctx.save();if(heroImpact&&Math.floor(heroAge/65)%2===0)ctx.filter='brightness(4) saturate(0)';const down=b?.hp<=0,hx=385+(!down&&heroImpact?Math.sin(heroAge/16)*4:0),hy=196;drawBattleHero('Astro',hx,hy,b?battleHeroPose(b,0,down):'idle',down);ctx.restore();if(!down&&b?.teamShield)drawOrbitWard('Astro',hx,hy,state.time);if(b?.magic&&!b.skillFx){ctx.strokeStyle='#d7c3ff';ctx.lineWidth=2;for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(ax,ay-10,29+i*7+Math.sin(state.time/90+i)*4,0,Math.PI*2);ctx.stroke()}}}
 function draw(){state.time=performance.now();if(state.mode==='battle'||state.mode==='battleBusy'||(state.mode==='stats'&&state.statsReturn==='battle'))drawBattle();else if(state.scene==='throne')drawThrone();else if(state.scene==='shrine')drawShrine();else if(state.scene==='forest'||state.scene==='pass')drawJourneyMap();else drawVillage();requestAnimationFrame(draw)}
-function blocked(x,y){const person=actorsBlockFeet(x,y);if(state.scene==='shrine'){if(x<46||x>466||y<38||y+9>282)return true;return footHitsRect(x,y,190,38,132,58)||[[64,48,20,68],[412,48,20,68],[64,128,20,68],[412,128,20,68]].some(b=>footHitsRect(x,y,...b))||person}if(x<12||x>500||y<18||y+9>282)return true;return person||ELARIS_HOMES.some(b=>buildingBlocksFeet(x,y,b))||buildingBlocksFeet(x,y,ELARIS_SHRINE)||footHitsRect(x,y,112,98,14,16)}
-function update(){if(state.mode!=='map'&&joystick.pointerId!==null)resetJoystick();if(state.mode==='map'&&state.player){const {x:dx,y:dy}=movementVector();const step=1.55*(sprinting()?RUN_MULTIPLIER:1)*(state.frameScale??1),slices=Math.max(1,Math.ceil(step/1.55));for(let i=0;i<slices;i++){const nx=state.player.x+dx*step/slices,ny=state.player.y+dy*step/slices;if(!blocked(nx,state.player.y))state.player.x=nx;if(!blocked(state.player.x,ny))state.player.y=ny;}if(Math.abs(dx)>Math.abs(dy))state.player.dir=dx>0?'right':'left';else if(dy)state.player.dir=dy>0?'down':'up';updatePrompt()}requestAnimationFrame(update)}
+function shrineBlocksFeet(x,y){
+ const feet=y+9;
+ // The lower side walls angle inward before meeting the front wall.
+ const wallInset=18+Math.min(38,Math.max(0,feet-211));
+ const sideInset=feet>=239?67:wallInset;
+ const backEdge=x<31||x>481?145:104;
+ const frontEdge=Math.abs(x-256)<24?282:263;
+ return x<sideInset||x>512-sideInset||y+5<backEdge||feet>frontEdge||
+  footHitsRect(x,y,185,95,141,17)||
+  [[75,101],[432,101]].some(([tx,ty])=>footHitsRect(x,y,tx-5,ty-5,10,11));
+}
+function blocked(x,y){const person=actorsBlockFeet(x,y);if(state.scene==='shrine')return shrineBlocksFeet(x,y)||person;if(x<12||x>500||y<18||y+9>282)return true;return person||ELARIS_HOMES.some(b=>buildingBlocksFeet(x,y,b))||buildingBlocksFeet(x,y,ELARIS_SHRINE)||footHitsRect(x,y,112,98,14,16)}
+function update(){if(state.mode!=='map'&&joystick.pointerId!==null)resetJoystick();if(state.mode==='map'&&state.player){preparePartyFormation();const p=state.player,{x:dx,y:dy}=movementVector();let x=p.x,y=p.y;const step=1.55*(sprinting()?RUN_MULTIPLIER:1)*(state.frameScale??1),slices=Math.max(1,Math.ceil(step/1.55));for(let i=0;i<slices;i++){const nx=x+dx*step/slices,ny=y+dy*step/slices;if(!blocked(nx,y))x=nx;if(!blocked(x,ny))y=ny;}
+ if(x!==p.x||y!==p.y)moveMapActor(p,x,y);else p.dir=facingDirection(dx,dy,p.dir);
+ updatePrompt()}requestAnimationFrame(update)}
 const villageEntrances=[{kind:'shrine',x:257,y:107},{kind:'home',x:63,y:128},{kind:'home',x:433,y:130},{kind:'home',x:63,y:258},{kind:'home',x:432,y:258}];
 function nearbyTalker(){if(!state.player)return null;return state.entities.filter(e=>e!==state.player&&e.visible&&!e.down&&e.talk).sort((a,b)=>Math.hypot(state.player.x-a.x,state.player.y-a.y)-Math.hypot(state.player.x-b.x,state.player.y-b.y)).find(e=>Math.hypot(state.player.x-e.x,state.player.y-e.y)<36)||null}
 function nearbyEntrance(){if(state.scene!=='village'||!state.player)return null;return villageEntrances.find(d=>Math.hypot(state.player.x-d.x,state.player.y-d.y)<31)||null}
 function nearShrineExit(){return state.scene==='shrine'&&state.player&&Math.hypot(state.player.x-256,state.player.y-260)<32}
 function updatePrompt(){const npc=nearbyTalker(),door=nearbyEntrance(),exit=nearShrineExit();ui.prompt.classList.toggle('hidden',!npc&&!door&&!exit);if(npc){const name=state.lang==='ar'?(AR_SPEAKER[npc.name]||npc.name):npc.name;ui.prompt.textContent=tr(`A  Talk to ${name}`,`A  تحدث مع ${name}`)}else if(exit)ui.prompt.textContent=tr('A  Exit shrine','A  اخرج من المزار');else if(door)ui.prompt.textContent=door.kind==='shrine'?tr('A  Enter shrine','A  ادخل المزار'):tr('A  Try door','A  جرّب الباب')}
-function interact(){if(state.mode==='dialogue'){advanceDialogue();return}if(state.mode==='choice'){resolveChoice(state.choiceSelected);return}if(state.mode==='map'){const npc=nearbyTalker();if(npc){if(npc.story)beginVillageStory();else talkToNpc(npc);return}if(nearShrineExit()){exitShrine();return}const door=nearbyEntrance();if(door){if(door.kind==='shrine')enterShrine();else showLockedDoor()}}}
+function interact(){if(state.mode==='dialogue'){advanceDialogue();return}if(state.mode==='choice'){resolveChoice(state.choiceSelected);return}if(state.mode==='map'){const npc=nearbyTalker();if(npc){faceConversation(npc,state.player);if(npc.story)beginVillageStory();else talkToNpc(npc);return}if(nearShrineExit()){exitShrine();return}const door=nearbyEntrance();if(door){if(door.kind==='shrine')enterShrine();else showLockedDoor()}}}
 async function talkToNpc(npc){state.mode='cutscene';ui.map.classList.add('hidden');await say(npc.talk);state.mode='map';ui.map.classList.remove('hidden');updatePrompt()}
 async function showLockedDoor(){state.mode='cutscene';ui.map.classList.add('hidden');await say([{speaker:'Narrator',text:'The door is locked. Whoever lives here has barred it from inside.'}]);state.mode='map';ui.map.classList.remove('hidden');updatePrompt()}
-async function enterShrine(){state.mode='cutscene';ui.map.classList.add('hidden');ui.fade.classList.add('on');await sleep(360);state.villageEntities=state.entities;state.player.x=256;state.player.y=244;state.player.dir='up';state.entities=[state.player,entity('Elder Orin',256,111,colors.Orin,{dir:'down',story:true,talk:true})];state.scene='shrine';ui.fade.classList.remove('on');await sleep(320);state.mode='map';ui.map.classList.remove('hidden');setObjective('shrine');updatePrompt()}
+async function enterShrine(){state.mode='cutscene';ui.map.classList.add('hidden');ui.fade.classList.add('on');await sleep(360);state.villageEntities=state.entities;state.player.x=256;state.player.y=244;state.player.dir='up';state.entities=[state.player,entity('Elder Aziz',256,111,colors.Aziz,{dir:'down',story:true,talk:true})];state.scene='shrine';ui.fade.classList.remove('on');await sleep(320);state.mode='map';ui.map.classList.remove('hidden');setObjective('shrine');updatePrompt()}
 async function exitShrine(){if(!state.villageEntities)return;state.mode='cutscene';ui.map.classList.add('hidden');ui.fade.classList.add('on');await sleep(360);state.entities=state.villageEntities;state.villageEntities=null;state.player.x=257;state.player.y=150;state.player.dir='down';state.scene='village';ui.fade.classList.remove('on');await sleep(320);state.mode='map';ui.map.classList.remove('hidden');setObjective('talk');updatePrompt()}
 let dialogueLines=[],dialogueIndex=0,typeTimer=null,typing=false,fullDialogueText='';
 function say(lines){return new Promise(resolve=>{dialogueLines=lines;dialogueIndex=0;state.dialogueResolve=resolve;state.mode='dialogue';ui.map.classList.add('hidden');ui.options.classList.add('hidden');ui.continue.classList.remove('hidden');$('dialogue-skip').classList.remove('hidden');ui.dialogue.classList.remove('hidden');showDialogueLine()})}
-function showDialogueLine(){const l=dialogueLines[dialogueIndex];ui.speaker.textContent=l.speaker;fullDialogueText=state.lang==='ar'?(l.ar||AR_TEXT[l.text]||l.text):l.text;ui.text.textContent='';typing=true;let i=0;if(typeTimer)clearInterval(typeTimer);typeTimer=setInterval(()=>{if(i>=fullDialogueText.length){finishTyping();return}ui.text.textContent+=fullDialogueText[i];if(fullDialogueText[i].trim())textBlip(i);i++},state.finalePlaying&&!state.fastText?(state.scene==='finale_gate'?46:34):24)}
+const speakerArabic={
+ "Shadow": "شادو",
+ "Astro": "أسترو",
+ "Venom": "فينوم",
+ "Michou": "ميشو",
+ "Atrox": "أتروكس",
+ "Raymond": "رايموند",
+ "Announcer": "المنادي",
+ "Narrator": "الراوي",
+ "TMRH": "تمره",
+ "Commander TMRH": "القائد تمره",
+ "Apothecary Lysa": "العطّارة ليسا",
+ "Arena Guide": "دليل المدرّج",
+ "Arena Keeper": "حارس المدرّج",
+ "Bram": "برام",
+ "Captain Darius": "النقيب داريوس",
+ "Captain Rook": "القبطان روك",
+ "Child": "طفل",
+ "Citizen": "مواطن",
+ "Dawn Officer": "ضابط الفجر",
+ "Dawn Sergeant": "رقيب الفجر",
+ "Dockhand Tamsin": "عاملة المرفأ تامسين",
+ "Elder Aziz": "العجوز عزيز",
+ "Freed Courier": "الرسول المحرر",
+ "Gate Guard": "حارس البوابة",
+ "Innkeeper Elin": "صاحبة النزل إيلين",
+ "Innkeeper Sela": "صاحبة النزل سيلا",
+ "Iris": "آيريس",
+ "Ivo": "إيفو",
+ "Legion": "الفيلق",
+ "Legion Captain": "قائد الفيلق",
+ "Legion Soldier": "جندي الفيلق",
+ "Moha": "موحا",
+ "Mason": "ماسون",
+ "Mayor Rowan": "العمدة روان",
+ "Messenger": "الرسول",
+ "Mira": "ميرا",
+ "Nella": "نيلا",
+ "Nia": "نيا",
+ "Night Guard": "حارس الليل",
+ "Old Keeper": "الحارس القديم",
+ "Quartermaster Edda": "أمينة المؤن إيدا",
+ "Scout": "الكشّاف",
+ "Sergeant Sera": "الرقيب سيرا",
+ "Smith Garr": "الحداد غار",
+ "Smith Oren": "الحداد عزيز",
+ "Steward Moha": "الحاكم موحا",
+ "Tomas": "توماس",
+ "Town Guard": "حارس المدينة",
+ "Yard Warden": "مشرف الساحة",
+ "The Beast": "المسخ",
+ "Soldier": "الجندي",
+ "Archer": "الرامي",
+ "Guard": "الحارس",
+ "Party": "الفريق",
+ "System": "النظام"
+};
+function speakerLabel(name){return tr(name,speakerArabic[name]||name)}
+function dialogueActor(name){
+ if(!name||name==='Narrator')return null;
+ const roles={'Moha':'Steward Moha','Legion Soldier':'Legionnaire','Legion Captain':'Atrox','Announcer':'Arena Guide'};
+ const matches=state.entities.filter(e=>e.visible&&!e.down);
+ return matches.find(e=>e.name===name)||matches.find(e=>e.name===roles[name]||e.name.startsWith(name+' '))||null;
+}
+let dialoguePair=[];
+function faceDialogueSpeaker(lines,index){
+ const current=dialogueActor(lines[index].speaker);
+ if(!current){if(!dialoguePair.some(e=>state.entities.includes(e)))dialoguePair=state.entities.filter(e=>e.visible&&(e===state.player||e.name==='Raymond'||e.name==='Atrox'));return}
+ if(['rally','finale_gate','finale_voyage'].includes(state.scene)){dialoguePair=[current];return}
+ const others=state.entities.filter(e=>e!==current&&e.visible&&!e.down);
+ if(current.name==='Raymond'&&['raymond_private','throne','finale_council'].includes(state.scene)&&!others.length){
+  faceActor(current,{x:256,y:55});dialoguePair=[current];return;
+ }
+ let other;
+ for(let d=1;d<lines.length&&!other;d++)for(const n of [index- d,index+d]){
+  const candidate=dialogueActor(lines[n]?.speaker);
+  if(candidate&&candidate!==current){other=candidate;break}
+ }
+ const leader=state.entities.includes(state.player)?state.player:null;
+ const nearest=others.slice().sort((a,b)=>Math.hypot(a.x-current.x,a.y-current.y)-Math.hypot(b.x-current.x,b.y-current.y))[0];
+ other=other||(leader!==current&&leader)||dialoguePair.find(e=>others.includes(e))||nearest;
+ if(other)faceConversation(current,other);
+ dialoguePair=other?[current,other]:[current];
+}
+function showDialogueLine(){faceDialogueSpeaker(dialogueLines,dialogueIndex);const l=dialogueLines[dialogueIndex];ui.speaker.dataset.character=l.speaker;ui.speaker.textContent=speakerLabel(l.speaker);fullDialogueText=state.lang==='ar'?(l.ar||AR_TEXT[l.text]||l.text):l.text;ui.text.textContent='';typing=true;let i=0;if(typeTimer)clearInterval(typeTimer);typeTimer=setInterval(()=>{if(i>=fullDialogueText.length){finishTyping();return}ui.text.textContent+=fullDialogueText[i];if(fullDialogueText[i].trim())textBlip(i);i++},state.finalePlaying&&!state.fastText?(state.scene==='finale_gate'?46:34):24)}
 function finishTyping(){if(typeTimer)clearInterval(typeTimer);typeTimer=null;ui.text.textContent=fullDialogueText;typing=false}
 function advanceDialogue(){if(state.mode!=='dialogue')return;if(typing){finishTyping();return}dialogueIndex++;if(dialogueIndex<dialogueLines.length){showDialogueLine();return}ui.dialogue.classList.add('hidden');const resolve=state.dialogueResolve;state.dialogueResolve=null;state.mode='cutscene';if(resolve)resolve()}
-function askChoice({speaker,text,options}){return new Promise(resolve=>{state.choiceResolve=resolve;state.choiceOptions=options;state.choiceSelected=0;state.choiceLocked=true;state.mode='choice';ui.speaker.textContent=speaker;ui.text.textContent=state.lang==='ar'?(AR_TEXT[text]||text):text;ui.continue.classList.add('hidden');$('dialogue-skip').classList.add('hidden');ui.options.classList.remove('hidden');ui.dialogue.classList.remove('hidden');renderDialogueChoices();if(state.choiceUnlockTimer)clearTimeout(state.choiceUnlockTimer);state.choiceUnlockTimer=setTimeout(()=>{state.choiceUnlockTimer=null;if(state.mode==='choice'||(state.mode==='dev'&&state.devReturn==='choice')||(state.mode==='devAuth'&&state.devAuthReturn==='choice')){state.choiceLocked=false;renderDialogueChoices()}},1000)})}
+function askChoice({speaker,text,options}){return new Promise(resolve=>{state.choiceResolve=resolve;state.choiceOptions=options;state.choiceSelected=0;state.choiceLocked=true;state.mode='choice';faceDialogueSpeaker([{speaker}],0);ui.speaker.dataset.character=speaker;ui.speaker.textContent=speakerLabel(speaker);ui.text.textContent=state.lang==='ar'?(AR_TEXT[text]||text):text;ui.continue.classList.add('hidden');$('dialogue-skip').classList.add('hidden');ui.options.classList.remove('hidden');ui.dialogue.classList.remove('hidden');renderDialogueChoices();if(state.choiceUnlockTimer)clearTimeout(state.choiceUnlockTimer);state.choiceUnlockTimer=setTimeout(()=>{state.choiceUnlockTimer=null;if(state.mode==='choice'||(state.mode==='dev'&&state.devReturn==='choice')||(state.mode==='devAuth'&&state.devAuthReturn==='choice')){state.choiceLocked=false;renderDialogueChoices()}},1000)})}
 function renderDialogueChoices(){ui.options.replaceChildren();state.choiceOptions.forEach((option,i)=>{const button=document.createElement('button');button.type='button';button.className='dialogue-choice'+(i===state.choiceSelected?' selected':'');button.textContent=state.lang==='ar'?option.ar:option.label;button.disabled=state.choiceLocked;button.addEventListener('click',e=>{e.stopPropagation();resolveChoice(i)});ui.options.appendChild(button)})}
 function resolveChoice(index){if(state.mode!=='choice'||state.choiceLocked)return;const option=state.choiceOptions[index];const resolve=state.choiceResolve;state.choiceResolve=null;state.choiceOptions=[];state.choiceLocked=false;ui.options.classList.add('hidden');ui.dialogue.classList.add('hidden');state.mode='cutscene';if(resolve)resolve(option.value)}
-function flash(color='#fff'){ui.flash.style.background=color;ui.flash.classList.remove('hit','alarm');void ui.flash.offsetWidth;ui.flash.classList.add('hit')}function alarmFlash(){ui.flash.style.background='#b40018';ui.flash.classList.remove('hit','alarm');void ui.flash.offsetWidth;ui.flash.classList.add('alarm')}function moveTo(e,x,y,speed=1.5){return new Promise(resolve=>{function step(){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy);if(d<speed){e.x=x;e.y=y;resolve();return}e.x+=dx/d*speed;e.y+=dy/d*speed;e.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');requestAnimationFrame(step)}step()})}async function fadeScene(scene){ui.fade.classList.add('on');await sleep(360);state.scene=scene;if(['throne','raymond_private','finale_council'].includes(scene))startMusic('sanctum');else if(state.finalePlaying&&scene==='finale_voyage')startMusic('voyage');ui.fade.classList.remove('on');await sleep(320)}
+function flash(color='#fff'){ui.flash.style.background=color;ui.flash.classList.remove('hit','alarm');void ui.flash.offsetWidth;ui.flash.classList.add('hit')}function alarmFlash(){ui.flash.style.background='#b40018';ui.flash.classList.remove('hit','alarm');void ui.flash.offsetWidth;ui.flash.classList.add('alarm')}function moveTo(e,x,y,speed=1.5){
+ const session=state.session;
+ return new Promise(resolve=>{
+  let last=performance.now();
+  function step(now){
+   if(session!==state.session)return;
+   const dx=x-e.x,dy=y-e.y,distance=Math.hypot(dx,dy);
+   const travel=speed*Math.min(3,Math.max(0,now-last)*.06);
+   last=now;
+   if(distance<=travel){moveMapActor(e,x,y);resolve();return;}
+   moveMapActor(e,e.x+dx/distance*travel,e.y+dy/distance*travel);
+   requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+ });
+}
+async function fadeScene(scene){ui.fade.classList.add('on');await sleep(360);state.scene=scene;if(['throne','raymond_private','finale_council'].includes(scene))startMusic('sanctum');else if(state.finalePlaying&&scene==='finale_voyage')startMusic('voyage');ui.fade.classList.remove('on');await sleep(320)}
 async function startGame(){const token=state.session;await unlockAudio();if(token!==state.session)return;startMusic('sanctum');ui.title.classList.add('hidden');ui.end.classList.add('hidden');state.mode='cutscene';state.scene='throne';state.entities=[entity('Raymond',260,150,colors.Raymond),entity('Atrox',178,188,colors.Atrox)];setObjective('prologue');await say([{speaker:'Raymond',text:'Commander Atrox. The village of Elaris is hiding an object beneath its shrine.'},{speaker:'Atrox',text:'You want the object recovered. Why send a legion?'},{speaker:'Raymond',text:'Because the villagers have protected it for generations. People mistake long possession for rightful ownership.'},{speaker:'Atrox',text:'And if they resist?'},{speaker:'Raymond',text:'Bring me what lies beneath the shrine. The rest is your judgment.'}]);if(token!==state.session)return;await moveTo(find('Atrox'),503,188,2.8);if(token!==state.session)return;state.entities=state.entities.filter(e=>e.name!=='Atrox');await say([D('Raymond','The lock is weakening, my lord. Tonight, we take the first key.','القفل يضعف يا سيدي. الليلة سنأخذ المفتاح الأول.'),D('Raymond','They will call it my victory. You and I know I have only done what you required of me.','سيسمونها انتصاري. أنا وأنت نعرف أنني لم أفعل سوى ما طلبته مني.'),D('Raymond','If this is a trial, I will not fail you. Let your silence mean that I am still worthy.','إن كان هذا اختبارًا، فلن أخذلك. ليكن صمتك علامة على أنني ما زلت أهلًا لخدمتك.')]);if(token!==state.session)return;await fadeScene('village');if(token===state.session){setupVillage();startMusic('village')}}
-function setupVillage(){state.burning=false;state.relic=false;state.villageEntities=null;state.entities=[entity('Astro',174,220,colors.Astro,{dir:'up'}),entity('Mira',348,155,'#a76576',{talk:[{speaker:'Mira',text:'Elder Orin is inside the shrine. He asked for you this morning.'},{speaker:'Mira',text:'The north road has been too quiet today. Even the traders avoided it.'}]}),entity('Tomas',136,158,colors.Villager,{talk:[{speaker:'Tomas',text:'My chickens refuse to go near your telescope. I think they find it judgmental.'}]}),entity('Child',330,229,'#d09b4f',{talk:[{speaker:'Child',text:'Astro, are stars really holes in the sky? Mira says I should stop asking.'}]})];state.player=find('Astro');state.mode='map';ui.map.classList.remove('hidden');setObjective('talk')}
-async function beginVillageStory(){state.mode='cutscene';ui.map.classList.add('hidden');await say([{speaker:'Elder Orin',text:'Astro. You have been staring through that lens since sunrise.'},{speaker:'Astro',text:'Incorrect. I stopped twice to recalibrate it and once because my left eye began producing duplicate stars.'},{speaker:'Elder Orin',text:'Did you also stop to eat?'},{speaker:'Astro',text:'Half a pear at approximately noon. Nutritionally inadequate, but technically an affirmative answer.'},{speaker:'Elder Orin',text:'And what did your technically nourished mind discover?'},{speaker:'Astro',text:'The eastern star of the Crowned Constellation is gone. Not obscured. Not displaced. Gone.'},{speaker:'Elder Orin',text:'Then put away your instruments. There are some truths we survived by leaving buried.'},{speaker:'Narrator',text:'A heavy crash rolled through the stone chamber. Dust fell from the ceiling.'},{speaker:'Astro',text:'That was not thunder.'},{speaker:'Elder Orin',text:'Outside. Now.'}]);await leaveShrineForRaid()}
-async function leaveShrineForRaid(){const elder=find('Elder Orin');state.mode='cutscene';ui.fade.classList.add('on');await sleep(360);state.entities=state.villageEntities;state.villageEntities=null;state.player.x=270;state.player.y=172;state.player.dir='up';elder.x=245;elder.y=158;elder.dir='up';state.entities.push(elder);state.scene='village';ui.fade.classList.remove('on');await sleep(320);await say([{speaker:'Narrator',text:'Astro and Elder Orin reached the square only moments before armored figures appeared on the north road.'}]);await sleep(500);runRaid()}
-async function runRaid(){setObjective('legion');const villagers=['Mira','Tomas','Child'].map(find);await Promise.all(villagers.map((v,i)=>moveTo(v,i===1?28:484,230+i*10,2.4)));const atrox=entity('Atrox',256,-8,colors.Atrox),s1=entity('Soldier A',225,-18,colors.Soldier),s2=entity('Soldier B',287,-18,colors.Soldier),s3=entity('Soldier C',202,-40,colors.Soldier),s4=entity('Soldier D',310,-40,colors.Soldier);state.entities.push(atrox,s1,s2,s3,s4);await Promise.all([moveTo(atrox,256,158,1.8),moveTo(s1,220,174,1.7),moveTo(s2,292,174,1.7),moveTo(s3,192,150,1.6),moveTo(s4,320,150,1.6)]);await say([{speaker:'Atrox',text:'By decree of the Brotherhood of Dawn, Elaris will surrender the relic sealed beneath its shrine.'},{speaker:'Elder Orin',text:'There is no relic here.'},{speaker:'Atrox',text:'Then you have nothing to lose by letting us search.'},{speaker:'Elder Orin',text:'Men who arrive with torches rarely care what they find.'},{speaker:'Atrox',text:'Search every building. Break the shrine seal.'}]);state.burning=true;startMusic('tension');alarmFlash();fireSfx();await sleep(1000);s1.dir='left';s2.dir='right';await Promise.all([moveTo(s1,90,142,2),moveTo(s2,425,142,2)]);await say([{speaker:'Narrator',text:'Doors splintered. Flames climbed the roofs as the legion closed around the shrine.'}]);const elder=find('Elder Orin');await moveTo(elder,256,128,1.3);await moveTo(s3,237,136,2);flash('#d8d7e1');elder.down=true;await say([{speaker:'Narrator',text:'When Elder Orin blocked the shrine steps, a legion blade struck him down.'}]);await moveTo(state.player,269,190,2.2);await say([{speaker:'Astro',text:'Stop! The shrine predates the entire Brotherhood of Dawn. You have no idea what you are opening.'},{speaker:'Atrox',text:'Step aside, scholar.'}]);const decision=await askChoice({speaker:'Astro',text:'What will Astro do?',options:[{label:'Fight',ar:'قاتل',value:'fight'},{label:'Beg for mercy',ar:'توسّل طلبًا للرحمة',value:'mercy'}]});if(decision==='fight'){await say([{speaker:'Astro',text:'No. Everyone I care about is behind me.'},{speaker:'Atrox',text:'Then show me what your stars taught you.'}]);startBattle()}else{await say([{speaker:'Astro',text:'Please. Take whatever you came for, but spare the villagers.'},{speaker:'Atrox',text:'You offer me what I already possess and call it a bargain.'},{speaker:'Astro',text:'Then consider it a request, not a bargain.'},{speaker:'Atrox',text:'Kneel, scholar, and watch how mercy looks from the ground.'},{speaker:'Narrator',text:'Astro lowered himself before the legion. Atrox did not order a single torch extinguished.'}]);state.player.down=true;continueAfterAtrox(false)}}
+function setupVillage(){state.burning=false;state.relic=false;state.villageEntities=null;state.entities=[entity('Astro',174,220,colors.Astro,{dir:'up'}),entity('Mira',348,155,'#a76576',{talk:[{speaker:'Mira',text:'Elder Aziz is inside the shrine. He asked for you this morning.'},{speaker:'Mira',text:'The north road has been too quiet today. Even the traders avoided it.'}]}),entity('Tomas',136,158,colors.Villager,{talk:[{speaker:'Tomas',text:'My chickens refuse to go near your telescope. I think they find it judgmental.'}]}),entity('Child',330,229,'#d09b4f',{talk:[{speaker:'Child',text:'Astro, are stars really holes in the sky? Mira says I should stop asking.'}]})];state.player=find('Astro');state.mode='map';ui.map.classList.remove('hidden');setObjective('talk')}
+async function beginVillageStory(){state.mode='cutscene';ui.map.classList.add('hidden');await say([{speaker:'Elder Aziz',text:'Astro. You have been staring through that lens since sunrise.'},{speaker:'Astro',text:'Incorrect. I stopped twice to recalibrate it and once because my left eye began producing duplicate stars.'},{speaker:'Elder Aziz',text:'Did you also stop to eat?'},{speaker:'Astro',text:'Half a pear at approximately noon. Nutritionally inadequate, but technically an affirmative answer.'},{speaker:'Elder Aziz',text:'And what did your technically nourished mind discover?'},{speaker:'Astro',text:'The eastern star of the Crowned Constellation is gone. Not obscured. Not displaced. Gone.'},{speaker:'Elder Aziz',text:'Then put away your instruments. There are some truths we survived by leaving buried.'},{speaker:'Narrator',text:'A heavy crash rolled through the stone chamber. Dust fell from the ceiling.'},{speaker:'Astro',text:'That was not thunder.'},{speaker:'Elder Aziz',text:'Outside. Now.'}]);await leaveShrineForRaid()}
+async function leaveShrineForRaid(){const elder=find('Elder Aziz');state.mode='cutscene';ui.fade.classList.add('on');await sleep(360);state.entities=state.villageEntities;state.villageEntities=null;state.player.x=270;state.player.y=188;state.player.dir='up';elder.x=237;elder.y=166;elder.dir='up';state.entities.push(elder);state.scene='village';ui.fade.classList.remove('on');await sleep(320);await say([{speaker:'Narrator',text:'Astro and Elder Aziz reached the square only moments before armored figures appeared on the north road.'}]);await sleep(500);runRaid()}
+async function runRaid(){setObjective('legion');const villagers=['Mira','Tomas','Child'].map(find);await Promise.all(villagers.map((v,i)=>moveTo(v,i===1?28:484,230+i*10,2.4)));const atrox=entity('Atrox',256,-8,colors.Atrox),s1=entity('Soldier A',225,-18,colors.Soldier),s2=entity('Soldier B',287,-18,colors.Soldier),s3=entity('Soldier C',202,-40,colors.Soldier),s4=entity('Soldier D',310,-40,colors.Soldier);state.entities.push(atrox,s1,s2,s3,s4);await Promise.all([moveTo(atrox,267,134,1.8),moveTo(s1,196,156,1.7),moveTo(s2,319,156,1.7),moveTo(s3,176,126,1.6),moveTo(s4,338,126,1.6)]);for(const guard of [s1,s2,s3,s4])faceActor(guard,find('Elder Aziz'));await say([{speaker:'Atrox',text:'By decree of the Brotherhood of Dawn, Elaris will surrender the relic sealed beneath its shrine.'},{speaker:'Elder Aziz',text:'There is no relic here.'},{speaker:'Atrox',text:'Then you have nothing to lose by letting us search.'},{speaker:'Elder Aziz',text:'Men who arrive with torches rarely care what they find.'},{speaker:'Atrox',text:'Search every building. Break the shrine seal.'}]);state.burning=true;startMusic('tension');alarmFlash();fireSfx();await sleep(1000);s1.dir='left';s2.dir='right';await Promise.all([moveTo(s1,90,142,2),moveTo(s2,425,142,2)]);await say([{speaker:'Narrator',text:'Doors splintered. Flames climbed the roofs as the legion closed around the shrine.'}]);const elder=find('Elder Aziz');await moveTo(elder,242,126,1.3);await moveTo(s3,220,134,2);faceActor(s3,elder);flash('#d8d7e1');elder.down=true;await say([{speaker:'Narrator',text:'When Elder Aziz blocked the shrine steps, a legion blade struck him down.'}]);await moveTo(state.player,269,190,2.2);await say([{speaker:'Astro',text:'Stop! The shrine predates the entire Brotherhood of Dawn. You have no idea what you are opening.'},{speaker:'Atrox',text:'Step aside, scholar.'}]);const decision=await askChoice({speaker:'Astro',text:'What will Astro do?',options:[{label:'Fight',ar:'قاتل',value:'fight'},{label:'Beg for mercy',ar:'توسّل طلبًا للرحمة',value:'mercy'}]});if(decision==='fight'){await say([{speaker:'Astro',text:'No. Everyone I care about is behind me.'},{speaker:'Atrox',text:'Then show me what your stars taught you.'}]);startBattle()}else{await say([{speaker:'Astro',text:'Please. Take whatever you came for, but spare the villagers.'},{speaker:'Atrox',text:'You offer me what I already possess and call it a bargain.'},{speaker:'Astro',text:'Then consider it a request, not a bargain.'},{speaker:'Atrox',text:'Kneel, scholar, and watch how mercy looks from the ground.'},{speaker:'Narrator',text:'Astro lowered himself before the legion. Atrox did not order a single torch extinguished.'}]);state.player.down=true;continueAfterAtrox(false)}}
 const mainCommands=[['ATTACK','attack','هجوم'],['GUTS','special','عزيمة'],['SPELL','magic','سحر'],['ITEM','item','أغراض'],['AUTO','auto','تلقائي'],['RUN','run','هروب']],magicCommands=[['STAR BOLT','starbolt','سهم نجمي'],['ORBIT SHIELD','shield','درع مداري'],['← BACK','back','رجوع →']];
 function startBattle(){startMusic('battle');state.mode='battle';state.battle={hp:84,ap:36,enemyHP:800,turn:0,shield:false,defend:false,busy:false,heroLunge:0,enemyShake:false,magic:false};state.battleMenu='main';state.selected=0;ui.dialogue.classList.add('hidden');ui.map.classList.add('hidden');ui.battle.classList.remove('hidden');setObjective('battle');setBattleMessage(tr('Atrox blocks the burning shrine. Astro stands alone.','يقف أتروكس أمام المزار المحترق. أسترو يواجهه وحيدًا.'));renderCommands();updateStats()}
 function setBattleMessage(t){ui.message.textContent=t}function renderCommands(){const list=state.battleMenu==='main'?mainCommands:magicCommands;ui.commands.classList.toggle('magic-menu',state.battleMenu==='magic');ui.commands.replaceChildren();list.forEach(([label,action,arLabel],i)=>{const b=document.createElement('button');b.type='button';b.className='command'+(i===state.selected?' selected':'');b.textContent=state.lang==='ar'?arLabel:label;b.dataset.action=action;b.disabled=state.battle.busy;b.addEventListener('click',()=>chooseCommand(action));ui.commands.appendChild(b)})}function updateStats(){const b=state.battle;$('level-text').textContent=state.level;$('hp-text').textContent=Math.max(0,b.hp);$('ap-text').textContent=b.ap;$('hp-meter').style.width=Math.max(0,b.hp/84*100)+'%';$('ap-meter').style.width=Math.max(0,b.ap/36*100)+'%'}
 function chooseCommand(action){const b=state.battle;if(!b||b.busy)return;if(action==='magic'){battleSfx('menu');state.battleMenu='magic';state.selected=0;renderCommands();return}if(action==='back'){battleSfx('menu');state.battleMenu='main';state.selected=0;renderCommands();return}if(action==='item'){battleSfx('menu');setBattleMessage(tr('Astro opens his satchel. It contains six notebooks and no useful items.','يفتح أسترو حقيبته. بداخلها ستة دفاتر ولا يوجد أي غرض مفيد.'));return}if(action==='starbolt'&&b.ap<7){battleSfx('menu');setBattleMessage(tr('Not enough AP.','لا توجد طاقة كافية.'));return}if(action==='shield'&&b.ap<6){battleSfx('menu');setBattleMessage(tr('Not enough AP.','لا توجد طاقة كافية.'));return}b.busy=true;b.defend=false;state.battleMenu='main';renderCommands();let msg='';if(action==='attack'||action==='auto'){const dmg=action==='auto'?4:6+Math.floor(Math.random()*5);b.enemyHP-=dmg;b.heroLunge=-75;b.enemyShake=true;battleSfx('attack');flash('#fff0c2');msg=tr(`Astro attacks. ${dmg} damage. Atrox does not step back.`,`يهاجم أسترو ويسبب ${dmg} من الضرر. لا يتراجع أتروكس خطوة واحدة.`);setTimeout(()=>{b.heroLunge=0;b.enemyShake=false},300)}if(action==='starbolt'){b.ap-=7;const dmg=9+Math.floor(Math.random()*6);b.enemyHP-=dmg;b.magic=true;b.enemyShake=true;battleSfx('magic');flash('#bfa7ff');msg=tr(`Star Bolt strikes for ${dmg} damage. Atrox raises one arm and absorbs the impact.`,`يصيب السهم النجمي أتروكس ويسبب ${dmg} من الضرر. يرفع أتروكس ذراعًا واحدة ويمتص الصدمة.`);setTimeout(()=>{b.magic=false;b.enemyShake=false},450)}if(action==='shield'){b.ap-=6;b.shield=true;battleSfx('shield');msg=tr('Three pale stars form an Orbit Shield around Astro.','تتشكل ثلاث نجوم باهتة كدرع مداري حول أسترو.')}if(action==='special'){b.ap=Math.max(0,b.ap-4);battleSfx('menu');msg=tr('ANALYZE — ATROX · HP: unreadable · Resistance: overwhelming · Victory estimate: 0.4%.','تحليل — أتروكس · الصحة: غير قابلة للقراءة · المقاومة: ساحقة · احتمال النصر: 0.4%.')}if(action==='run'){battleSfx('menu');msg=tr('Astro searches for an escape. Atrox has already closed every path.','يبحث أسترو عن طريق للهرب، لكن أتروكس أغلق كل المسارات بالفعل.')}b.turn++;setBattleMessage(msg);updateStats();setTimeout(enemyTurn,950)}
 function enemyTurn(){const b=state.battle;if(b.turn>=3){setBattleMessage(tr("Atrox uses COMMANDER'S VERDICT. Astro's spell breaks before it can form.",'يستخدم أتروكس حكم القائد. تتحطم تعويذة أسترو قبل أن تتشكل.'));battleSfx('defeat');flash('#e8ebff');b.hp=0;updateStats();setTimeout(finishBattle,1250);return}let dmg=b.turn===1?22:34,move=b.turn===1?'IRON DISCIPLINE':'SHIELD BREAKER',moveAr=b.turn===1?'الانضباط الحديدي':'محطم الدروع';if(b.shield)dmg=Math.ceil(dmg*.58);if(b.defend)dmg=Math.ceil(dmg*.5);b.shield=false;b.defend=false;b.hp=Math.max(1,b.hp-dmg);battleSfx('enemy');flash('#d75b63');setBattleMessage(tr(`Atrox uses ${move}. ${dmg} damage. “Is that all the stars gave you?”`,`يستخدم أتروكس ${moveAr} ويسبب ${dmg} من الضرر. «هل هذا كل ما منحَتك إياه النجوم؟»`));updateStats();b.busy=false;renderCommands()}
 async function finishBattle(){startMusic('tension');ui.battle.classList.add('hidden');state.mode='cutscene';state.scene='village';state.player.down=true;const atrox=find('Atrox');atrox.x=270;atrox.y=178;await say([{speaker:'Atrox',text:'You had courage. No judgment.'},{speaker:'Astro',text:'I only needed... one clear shot.'},{speaker:'Atrox',text:'You had three. I allowed them.'}]);continueAfterAtrox(true)}
-async function continueAfterAtrox(fought){state.mode='cutscene';state.scene='village';state.relic=true;const carrier=find('Soldier B');carrier.x=280;carrier.y=116;carrier.carrying=true;const finalAtroxLine=fought?'A man who could not protect his own village is no threat to us.':'Look at him. A coward who begs on his knees is no threat to us. Leave him here.';await say([{speaker:'Narrator',text:'The shrine doors broke. A soldier emerged carrying a crystal case. Inside it rested a fragment of lightless stone.'},{speaker:'Atrox',text:'We have what we came for. Leave the scholar.'},{speaker:'Legion Soldier',text:'He saw everything.'},{speaker:'Atrox',text:finalAtroxLine}]);const troops=['Atrox','Soldier A','Soldier B','Soldier C','Soldier D'].map(find);await Promise.all(troops.map((e,i)=>moveTo(e,230+i*14,-24-i*5,1.9)));startMusic('village');const elder=find('Elder Orin');state.player.down=false;await moveTo(state.player,238,146,1.2);state.player.down=true;await say([{speaker:'Astro',text:'Do not move. I can calculate the safest way to—'},{speaker:'Elder Orin',text:'Listen. The constellation was never a crown.'},{speaker:'Astro',text:'Save your strength. Please.'},{speaker:'Elder Orin',text:'It was a lock. Find the missing star... before they find the door.'},{speaker:'Narrator',text:'Elder Orin died before Astro could ask what the words meant.'}]);elder.visible=false;state.player.down=false;state.player.x=224;state.player.y=162;const shadow=entity('Shadow',250,302,colors.Shadow,{dir:'up'});state.entities.push(shadow);await moveTo(shadow,250,196,1.45);await say([{speaker:'Shadow',text:'You are alive.'},{speaker:'Astro',text:'An optimistic interpretation of the available evidence.'},{speaker:'Shadow',text:'Can you stand?'},{speaker:'Astro',text:'Not according to any medically useful definition.'},{speaker:'Narrator',text:'Shadow pulled him up. For an instant, Astro saw the stranger’s shadow move before he did.'},{speaker:'Astro',text:'Your shadow is temporally misaligned by almost half a second.'},{speaker:'Shadow',text:'You are bleeding.'},{speaker:'Astro',text:'Both observations can be true.'},{speaker:'Shadow',text:'Who did this?'},{speaker:'Astro',text:'Atrox. Commander of the Iron Legion. He took something from beneath the shrine.'},{speaker:'Narrator',text:'Black residue clung to Astro’s sleeve. The mark beneath Shadow’s coat answered with a cold pulse.'},{speaker:'Shadow',text:'Which road?'},{speaker:'Astro',text:'North. But that is an entire legion, and you are one unusually ominous man.'},{speaker:'Shadow',text:'Then keep up.'},{speaker:'Astro',text:'You do not even know my name.'},{speaker:'Shadow',text:'Tell me while we walk.'}]);await Promise.all([moveTo(shadow,252,-20,1.3),moveTo(state.player,252,8,1.25)]);await showRaymondEnding()}
+async function leaveElarisByNorthRoad(actor,exitY,speed,delay=0){
+ const session=state.session;
+ if(delay){await sleep(delay);if(session!==state.session)return;}
+ const shrine=exteriorArtRect(ELARIS_SHRINE);
+ const eastHouse=exteriorArtRect(ELARIS_HOMES[1]);
+ const lane=Math.round((shrine.x+shrine.w+eastHouse.x)/2);
+ const roadY=150;
+ await moveTo(actor,actor.x,roadY,speed);
+ await moveTo(actor,lane,roadY,speed);
+ await moveTo(actor,lane,exitY,speed);
+}
+async function continueAfterAtrox(fought){state.mode='cutscene';state.scene='village';state.relic=true;const carrier=find('Soldier B');carrier.x=280;carrier.y=116;carrier.carrying=true;const finalAtroxLine=fought?'A man who could not protect his own village is no threat to us.':'Look at him. A coward who begs on his knees is no threat to us. Leave him here.';await say([{speaker:'Narrator',text:'The shrine doors broke. A soldier emerged carrying a crystal case. Inside it rested a fragment of lightless stone.'},{speaker:'Atrox',text:'We have what we came for. Leave the scholar.'},{speaker:'Legion Soldier',text:'He saw everything.'},{speaker:'Atrox',text:finalAtroxLine}]);const troops=['Atrox','Soldier A','Soldier B','Soldier C','Soldier D'].map(find);await Promise.all(troops.map((e,i)=>moveTo(e,230+i*14,-24-i*5,1.9)));startMusic('village');const elder=find('Elder Aziz');state.player.down=false;await moveTo(state.player,238,146,1.2);state.player.down=true;await say([{speaker:'Astro',text:'Do not move. I can calculate the safest way to—'},{speaker:'Elder Aziz',text:'Listen. The constellation was never a crown.'},{speaker:'Astro',text:'Save your strength. Please.'},{speaker:'Elder Aziz',text:'It was a lock. Find the missing star... before they find the door.'},{speaker:'Narrator',text:'Elder Aziz died before Astro could ask what the words meant.'}]);elder.visible=false;state.player.down=false;state.player.x=224;state.player.y=162;const shadow=entity('Shadow',250,302,colors.Shadow,{dir:'up'});state.entities.push(shadow);await moveTo(shadow,250,196,1.45);await say([{speaker:'Shadow',text:'You are alive.'},{speaker:'Astro',text:'An optimistic interpretation of the available evidence.'},{speaker:'Shadow',text:'Can you stand?'},{speaker:'Astro',text:'Not according to any medically useful definition.'},{speaker:'Narrator',text:'Shadow pulled him up. For an instant, Astro saw the stranger’s shadow move before he did.'},{speaker:'Astro',text:'Your shadow is temporally misaligned by almost half a second.'},{speaker:'Shadow',text:'You are bleeding.'},{speaker:'Astro',text:'Both observations can be true.'},{speaker:'Shadow',text:'Who did this?'},{speaker:'Astro',text:'Atrox. Commander of the Iron Legion. He took something from beneath the shrine.'},{speaker:'Narrator',text:'Black residue clung to Astro’s sleeve. The mark beneath Shadow’s coat answered with a cold pulse.'},{speaker:'Shadow',text:'Which road?'},{speaker:'Astro',text:'North. But that is an entire legion, and you are one unusually ominous man.'},{speaker:'Shadow',text:'Then keep up.'},{speaker:'Astro',text:'You do not even know my name.'},{speaker:'Shadow',text:'Tell me while we walk.'}]);await Promise.all([leaveElarisByNorthRoad(shadow,-44,1.65),leaveElarisByNorthRoad(state.player,-16,1.6,350)]);await showRaymondEnding()}
 async function showRaymondEnding(){await fadeScene('throne');state.entities=[entity('Raymond',260,150,colors.Raymond)];await say([{speaker:'Narrator',text:'High above the valley, Raymond opened his eyes before an empty throne.'},{speaker:'Raymond',text:'The key is moving, my lord.'},{speaker:'Narrator',text:'No voice answered him.'},{speaker:'Raymond',text:'Yes. Shadow will come to us.'},{speaker:'Raymond',text:'He simply does not know why yet.'}]);state.mode='end';ui.end.classList.remove('hidden');setObjective('complete')}
 function reset(){resetJoystick();stopMusic();if(typeTimer)clearInterval(typeTimer);if(state.choiceUnlockTimer)clearTimeout(state.choiceUnlockTimer);typing=false;state.mode='title';state.scene='village';state.entities=[];state.villageEntities=null;state.player=null;state.level=1;state.burning=false;state.relic=false;state.choiceResolve=null;state.choiceOptions=[];state.choiceLocked=false;state.choiceUnlockTimer=null;state.battle=null;ui.title.classList.remove('hidden');ui.map.classList.add('hidden');ui.dialogue.classList.add('hidden');ui.options.classList.add('hidden');ui.battle.classList.add('hidden');ui.end.classList.add('hidden');applyLanguage()}
 function navigateBattle(key){const list=battleCommandList();if(state.battleMenu==='item'){const delta={ArrowUp:-2,ArrowDown:2,ArrowLeft:-1,ArrowRight:1}[key]||0;state.selected=(state.selected+delta+list.length)%list.length}else if(state.battleMenu!=='main'){if(key==='ArrowUp')state.selected=(state.selected-1+list.length)%list.length;if(key==='ArrowDown')state.selected=(state.selected+1)%list.length}else{if(key==='ArrowUp'&&state.selected<4)state.selected=(state.selected+3)%4;if(key==='ArrowDown'&&state.selected<4)state.selected=(state.selected+1)%4;if(key==='ArrowLeft')state.selected=state.selected===5?0:4;if(key==='ArrowRight')state.selected=state.selected===4?0:5}battleSfx('menu');renderCommands()}
+

@@ -58,3 +58,4 @@
  [dir=rtl] #game .dialogue-choice,[dir=rtl] #game.desktop-ui .dialogue-choice{font-size:15px}
 }
 @media(prefers-reduced-motion:reduce){#game #continue::after{animation:none}}
+

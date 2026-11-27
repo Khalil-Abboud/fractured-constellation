@@ -20,11 +20,11 @@ function regionalEnemies(region=encounterRegion()){const packs=REGION_PACKS[regi
 function bossLoot(enemy,min,max){return Object.assign(enemy,{goldMin:min,goldMax:max})}
 function battleGold(enemies){return enemies.reduce((total,e)=>{if(e.goldAward===undefined)e.goldAward=Number.isFinite(e.goldMin)?randomInt(e.goldMin,e.goldMax):Math.max(0,e.gold||0);return total+e.goldAward},0)}
 const REMEDIES={
- herb:{en:'Healing Herb',ar:'عشب شفاء',price:20,heal:50,resource:'hp',field:'herbs'},
- blue:{en:'Blue Herb',ar:'عشب أزرق',price:25,heal:30,resource:'ap',field:'blueHerbs'},
- vital:{en:'Vital Herb',ar:'عشب الحيوية',price:55,heal:120,resource:'hp'},
- azure:{en:'Azure Herb',ar:'عشب اللازورد',price:65,heal:70,resource:'ap'},
- dawnleaf:{en:'Dawnleaf',ar:'ورقة الفجر',price:85,heal:50,resource:'hp',all:true}
+ herb:{en:'Healing Herb',ar:'عشب شفاء',price:8,heal:50,resource:'hp',field:'herbs'},
+ blue:{en:'Blue Herb',ar:'عشب أزرق',price:12,heal:30,resource:'ap',field:'blueHerbs'},
+ vital:{en:'Vital Herb',ar:'عشب الحيوية',price:23,heal:120,resource:'hp'},
+ azure:{en:'Azure Herb',ar:'عشب اللازورد',price:32,heal:70,resource:'ap'},
+ dawnleaf:{en:'Dawnleaf',ar:'ورقة الفجر',price:48,heal:50,resource:'hp',all:true}
 };
 function ensureInventory(){if(!state.inventory)state.inventory={};for(const id of ['vital','azure','dawnleaf'])if(!Number.isInteger(state.inventory[id])||state.inventory[id]<0)state.inventory[id]=0}
 function remedyCount(id){const item=REMEDIES[id];ensureInventory();return item.field?(state[item.field]||0):(state.inventory[id]||0)}
@@ -33,7 +33,7 @@ function easternMarket(){return ['bellInn','bellShop','bellForge','holding'].inc
 function innPrice(){return state.scene==='bellInn'?20:10}
 function remedyDetail(item){return item.all?tr('Restores '+item.heal+' HP to every companion, including fallen allies.','يستعيد كل رفيق '+item.heal+' صحة، بما فيهم الرفاق الساقطون.'):item.resource==='hp'?tr('Restores '+item.heal+' HP to one companion; can revive.','يستعيد رفيق واحد '+item.heal+' صحة؛ يمكنه إحياء رفيق ساقط.'):tr('Restores '+item.heal+' mana to one living companion.','يستعيد رفيق حي واحد '+item.heal+' مانا.')}
 function stockedGearIds(){const eastern=new Set(['steelSword','starStaff','steelDagger','ironArmor','ironHelmet','guardBoots','guardGloves']);return Object.keys(GEAR).filter(id=>GEAR[id].price>0&&(easternMarket()?(GEAR[id].region==='east'||eastern.has(id)):!GEAR[id].region))}
-function marketRows(){const m=state.market,h=state.party[m.hero];ensureEquipment();if(m.kind==='inn')return[{id:'sleep',en:'Rest · whole party',ar:'استراحة · الفريق كله',price:innPrice(),detail:tr('Restore all HP and mana.','استعادة كامل الصحة والمانا.')}];if(m.kind==='supplies')return(easternMarket()?Object.keys(REMEDIES):['herb','blue']).map(id=>({id,...REMEDIES[id],detail:remedyDetail(REMEDIES[id])}));const stock=new Set([...stockedGearIds(),...h.gearBag]);return [...stock].filter(id=>GEAR[id]&&GEAR[id].price>0&&(!GEAR[id].type||GEAR[id].type===weaponTypes[h.name])).map(id=>{const g=GEAR[id],before=heroStats(h),after=heroStats({...h,equipment:{...h.equipment,[g.slot]:id}}),changes=Object.keys(before).filter(k=>before[k]!==after[k]).map(k=>statLabel(k)+': '+before[k]+' → '+after[k]).join(' · ');return{id,...g,owned:h.gearBag.includes(id),detail:gearBonusText(g)+(changes?' | '+changes:'')}})}
+function marketRows(){const m=state.market,h=state.party[m.hero];ensureEquipment();if(m.kind==='inn')return[{id:'sleep',en:'Rest · whole party',ar:'استراحة · الفريق كله',price:innPrice(),detail:tr('Restore all HP and mana.','استعادة كامل الصحة والمانا.')}];if(m.kind==='supplies')return(easternMarket()?Object.keys(REMEDIES):['herb','blue']).map(id=>({id,...REMEDIES[id],detail:remedyDetail(REMEDIES[id])}));const stock=new Set([...stockedGearIds(),...h.gearBag]);return [...stock].filter(id=>GEAR[id]&&GEAR[id].price>0&&(!GEAR[id].type||GEAR[id].type===weaponTypes[h.name])).map(id=>{const g=GEAR[id],before=heroStats(h),after=heroStats({...h,equipment:{...h.equipment,[g.slot]:id}}),changes=Object.keys(before).filter(k=>before[k]!==after[k]).map(k=>statLabel(k)+' \u2066'+before[k]+' → '+after[k]+'\u2069').join(' · ');return{id,...g,owned:h.gearBag.includes(id),detail:changes||gearBonusText(g)}})}
 function statLabel(key){return tr({hp:'HP',ap:'Mana',attack:'Attack',defense:'Defense',magic:'Magic',speed:'Speed'}[key],{hp:'الصحة',ap:'المانا',attack:'الهجوم',defense:'الدفاع',magic:'السحر',speed:'السرعة'}[key])}
 function useRemedyInBattle(id){const b=state.battle,item=REMEDIES[id];if(!item||!b?.kind||b.busy||state.mode!=='battle')return;const count=remedyCount(id);if(!count){setBattleMessage(tr('No '+item.en+' left.','لم يبقَ '+item.ar+'.'));return}const resource=item.resource,eligible=resource==='ap'?state.party.filter(h=>h.hp>0):state.party,targets=item.all?eligible:[eligible.slice().sort((a,c)=>a[resource]/heroStats(a)[resource]-c[resource]/heroStats(c)[resource])[0]];if(!targets[0])return;if(targets.every(h=>h[resource]>=heroStats(h)[resource])){setBattleMessage(tr('Recovery is not needed. Choose another item.','لا حاجة إلى التعافي. اختر غرضًا آخر.'));return}setRemedyCount(id,count-1);b.busy=true;state.battleMenu='main';const results=targets.map(h=>{const before=h[resource];h[resource]=Math.min(heroStats(h)[resource],before+item.heal);return tr(h.name,HERO_AR[h.name])+': +'+(h[resource]-before)+' '+statLabel(resource)});battleSfx('shield');setBattleMessage(tr(item.en,item.ar)+' · '+results.join(' · '));renderCommands();updateStats();battleDelay(afterHeroAction,800)}
 colors.Venom='#61834c';baseStats.Venom={hp:96,ap:20,attack:19,defense:8,magic:10,speed:16};
@@ -41,27 +41,27 @@ colors.Michou='#a06a35';baseStats.Michou={hp:92,ap:28,attack:21,defense:7,magic:
 const weaponTypes={Shadow:'sword',Astro:'staff',Venom:'dagger',Michou:'bow',Archer:'bow'};
 const GEAR={
  wornSword:{en:'Worn Sword',ar:'سيف قديم',slot:'weapon',type:'sword',price:0,bonus:{}},oldStaff:{en:'Old Staff',ar:'عصا قديمة',slot:'weapon',type:'staff',price:0,bonus:{}},plainDagger:{en:'Plain Dagger',ar:'خنجر بسيط',slot:'weapon',type:'dagger',price:0,bonus:{}},
- ironSword:{en:'Iron Sword',ar:'سيف حديدي',slot:'weapon',type:'sword',price:30,bonus:{attack:4}},steelSword:{en:'Steel Sword',ar:'سيف فولاذي',slot:'weapon',type:'sword',price:70,bonus:{attack:8}},
- ashStaff:{en:'Ashwood Staff',ar:'عصا خشب الدردار',slot:'weapon',type:'staff',price:30,bonus:{attack:2,magic:4}},starStaff:{en:'Starwood Staff',ar:'عصا خشب النجوم',slot:'weapon',type:'staff',price:70,bonus:{attack:4,magic:8}},
- ironDagger:{en:'Iron Dagger',ar:'خنجر حديدي',slot:'weapon',type:'dagger',price:30,bonus:{attack:4}},steelDagger:{en:'Steel Dagger',ar:'خنجر فولاذي',slot:'weapon',type:'dagger',price:70,bonus:{attack:8}},
- huntingBow:{en:'Hunting Bow',ar:'قوس صيد',slot:'weapon',type:'bow',price:30,bonus:{attack:4}},
- leatherArmor:{en:'Leather Armor',ar:'درع جلدي',slot:'armor',price:25,bonus:{defense:3}},ironArmor:{en:'Iron Armor',ar:'درع حديدي',slot:'armor',price:60,bonus:{defense:6}},
+ ironSword:{en:'Iron Sword',ar:'سيف حديدي',slot:'weapon',type:'sword',price:24,bonus:{attack:4}},steelSword:{en:'Steel Sword',ar:'سيف فولاذي',slot:'weapon',type:'sword',price:55,bonus:{attack:8}},
+ ashStaff:{en:'Ashwood Staff',ar:'عصا خشب الدردار',slot:'weapon',type:'staff',price:24,bonus:{attack:2,magic:4}},starStaff:{en:'Starwood Staff',ar:'عصا خشب النجوم',slot:'weapon',type:'staff',price:55,bonus:{attack:4,magic:8}},
+ ironDagger:{en:'Iron Dagger',ar:'خنجر حديدي',slot:'weapon',type:'dagger',price:24,bonus:{attack:4}},steelDagger:{en:'Steel Dagger',ar:'خنجر فولاذي',slot:'weapon',type:'dagger',price:55,bonus:{attack:8}},
+ huntingBow:{en:'Hunting Bow',ar:'قوس صيد',slot:'weapon',type:'bow',price:24,bonus:{attack:4}},
+ leatherArmor:{en:'Leather Armor',ar:'درع جلدي',slot:'armor',price:20,bonus:{defense:3}},ironArmor:{en:'Iron Armor',ar:'درع حديدي',slot:'armor',price:48,bonus:{defense:6}},
  leatherHelmet:{en:'Leather Helmet',ar:'خوذة جلدية',slot:'helmet',price:15,bonus:{defense:1}},ironHelmet:{en:'Iron Helmet',ar:'خوذة حديدية',slot:'helmet',price:35,bonus:{defense:2}},
  travelBoots:{en:'Travel Boots',ar:'أحذية سفر',slot:'boots',price:15,bonus:{defense:1}},guardBoots:{en:'Guard Boots',ar:'أحذية حراسة',slot:'boots',price:35,bonus:{defense:2}},
  leatherGloves:{en:'Leather Gloves',ar:'قفازات جلدية',slot:'gloves',price:15,bonus:{defense:1}},guardGloves:{en:'Guard Gloves',ar:'قفازات حراسة',slot:'gloves',price:35,bonus:{defense:2}},
- vanguardSword:{en:'Vanguard Sword',ar:'سيف الطليعة',slot:'weapon',type:'sword',price:180,region:'east',bonus:{attack:11,defense:3}},
- moonsteelBlade:{en:'Moonsteel Blade',ar:'نصل فولاذ القمر',slot:'weapon',type:'sword',price:210,region:'east',bonus:{attack:14,speed:-2}},
- astralRod:{en:'Astral Rod',ar:'عصا فلكية',slot:'weapon',type:'staff',price:185,region:'east',bonus:{attack:3,magic:11,ap:6}},
- wardStaff:{en:'Ward Staff',ar:'عصا الوقاية',slot:'weapon',type:'staff',price:170,region:'east',bonus:{attack:2,magic:8,defense:4}},
- quickfang:{en:'Quickfang Dagger',ar:'خنجر الناب السريع',slot:'weapon',type:'dagger',price:175,region:'east',bonus:{attack:10,speed:4}},
- nightglassDagger:{en:'Nightglass Dagger',ar:'خنجر زجاج الليل',slot:'weapon',type:'dagger',price:215,region:'east',bonus:{attack:14,defense:-1}},
- windBow:{en:'Wind Bow',ar:'قوس الرياح',slot:'weapon',type:'bow',price:190,region:'east',bonus:{attack:11,speed:3}},
- plateVest:{en:'Plate Vest',ar:'درع صفائح',slot:'armor',price:145,region:'east',bonus:{defense:9,speed:-2}},
- runicRobe:{en:'Runic Robe',ar:'رداء الرون',slot:'armor',price:135,region:'east',bonus:{defense:5,magic:4,ap:5}},
- runeCirclet:{en:'Rune Circlet',ar:'عصابة الرون',slot:'helmet',price:95,region:'east',bonus:{defense:3,ap:8}},
- swiftBoots:{en:'Swift Boots',ar:'أحذية خفة',slot:'boots',price:85,region:'east',bonus:{defense:2,speed:3}},
- focusGloves:{en:'Focus Gloves',ar:'قفازات التركيز',slot:'gloves',price:85,region:'east',bonus:{defense:2,magic:3}},
- ironGrip:{en:'Irongrip Gloves',ar:'قفازات القبضة الحديدية',slot:'gloves',price:80,region:'east',bonus:{defense:3,attack:2}}
+ vanguardSword:{en:'Vanguard Sword',ar:'سيف الطليعة',slot:'weapon',type:'sword',price:112,region:'east',bonus:{attack:11,defense:3}},
+ moonsteelBlade:{en:'Moonsteel Blade',ar:'نصل فولاذ القمر',slot:'weapon',type:'sword',price:135,region:'east',bonus:{attack:14,speed:-2}},
+ astralRod:{en:'Astral Rod',ar:'عصا فلكية',slot:'weapon',type:'staff',price:116,region:'east',bonus:{attack:3,magic:11,ap:6}},
+ wardStaff:{en:'Ward Staff',ar:'عصا الوقاية',slot:'weapon',type:'staff',price:105,region:'east',bonus:{attack:2,magic:8,defense:4}},
+ quickfang:{en:'Quickfang Dagger',ar:'خنجر الناب السريع',slot:'weapon',type:'dagger',price:108,region:'east',bonus:{attack:10,speed:4}},
+ nightglassDagger:{en:'Nightglass Dagger',ar:'خنجر زجاج الليل',slot:'weapon',type:'dagger',price:135,region:'east',bonus:{attack:14,defense:-1}},
+ windBow:{en:'Wind Bow',ar:'قوس الرياح',slot:'weapon',type:'bow',price:118,region:'east',bonus:{attack:11,speed:3}},
+ plateVest:{en:'Plate Vest',ar:'درع صفائح',slot:'armor',price:92,region:'east',bonus:{defense:9,speed:-2}},
+ runicRobe:{en:'Runic Robe',ar:'رداء الرون',slot:'armor',price:88,region:'east',bonus:{defense:5,magic:4,ap:5}},
+ runeCirclet:{en:'Rune Circlet',ar:'عصابة الرون',slot:'helmet',price:66,region:'east',bonus:{defense:3,ap:8}},
+ swiftBoots:{en:'Swift Boots',ar:'أحذية خفة',slot:'boots',price:62,region:'east',bonus:{defense:2,speed:3}},
+ focusGloves:{en:'Focus Gloves',ar:'قفازات التركيز',slot:'gloves',price:62,region:'east',bonus:{defense:2,magic:3}},
+ ironGrip:{en:'Irongrip Gloves',ar:'قفازات القبضة الحديدية',slot:'gloves',price:58,region:'east',bonus:{defense:3,attack:2}}
 };
 const SLOT_LABELS={weapon:['Weapon','السلاح'],armor:['Armor','الدرع'],helmet:['Helmet','الخوذة'],boots:['Boots','الأحذية'],gloves:['Gloves','القفازات']};
 function ensureEquipment(){ensureInventory();state.party.forEach(h=>{if(!h.equipment)h.equipment={weapon:{Shadow:'wornSword',Astro:'oldStaff',Venom:'plainDagger',Michou:'huntingBow'}[h.name]||null,armor:null,helmet:null,boots:null,gloves:null};if(!Array.isArray(h.gearBag))h.gearBag=[];for(const id of Object.values(h.equipment))if(id&&GEAR[id]&&!h.gearBag.includes(id))h.gearBag.push(id)})}
@@ -69,21 +69,21 @@ newHero=function(name){const h=chapterPrevious.newHero(name);h.equipment={weapon
 startGame=async function(){$('continue-game').classList.add('hidden');await chapterPrevious.startGame()};
 returnToForest=async function(){if(!state.postCheckpoint){await chapterPrevious.returnToForest();return}const token=state.session;state.mode='cutscene';await fadeScene('forest');if(token!==state.session)return;state.entities=partySprites(463,52);state.entities.push(entity('Scout',133,212,'#879568',{talk:true}));resumeChapterMap();journeyObjective()};
 heroStats=function(h){const stats={...baseStats[h.name]};for(const id of Object.values(h.equipment||{})){const gear=GEAR[id];if(gear)for(const [key,value] of Object.entries(gear.bonus))stats[key]+=value}const factor=1.1**(h.level-1);for(const key of Object.keys(stats))stats[key]=Math.max(1,Math.floor(stats[key]*factor+1e-9));return stats};
-function chapterFlags(){return{postCheckpoint:false,townRaidCleared:false,mayorHome:false,chiefMet:false,nightDone:false,nightActive:false,venomState:'unseen',venomRefusals:0,releaseRequested:false,venomJoined:false,michouState:'unseen',rallySeen:false}}
-reset=function(){chapterPrevious.reset();Object.assign(state,chapterFlags());state.rallyPlaying=false;state.blueHerbs=0;state.manorRoom='foyer';state.inventory={vital:0,azure:0,dawnleaf:0};state.fastText=false;state.devTesting=false;developmentCheckpoint=null;state.market=null;state.devReturn=null;state.townReturn=null;state.forestReturn=null;state.trail=[];state.lastMovementAt=null;ensureEquipment();$('market-screen').classList.add('hidden');$('dev-screen').classList.add('hidden');$('save-notice').classList.add('hidden');updateContinueButton()};
+function chapterFlags(){return{postCheckpoint:false,townRaidCleared:false,mayorHome:false,chiefMet:false,manorChestOpened:false,nightDone:false,nightActive:false,venomState:'unseen',venomRefusals:0,releaseRequested:false,venomJoined:false,michouState:'unseen',rallySeen:false}}
+reset=function(){chapterPrevious.reset();if(ui.fade.classList.contains('inn-rest'))ui.fade.classList.remove('on','inn-rest');Object.assign(state,chapterFlags());state.rallyPlaying=false;state.blueHerbs=0;state.manorRoom='foyer';state.inventory={vital:0,azure:0,dawnleaf:0};state.fastText=false;state.devTesting=false;developmentCheckpoint=null;state.market=null;state.devReturn=null;state.townReturn=null;state.forestReturn=null;state.trail=[];state.lastMovementAt=null;ensureEquipment();$('market-screen').classList.add('hidden');$('dev-screen').classList.add('hidden');$('save-notice').classList.add('hidden');updateContinueButton()};
 function saveNotice(en,ar){$('save-notice').textContent=tr(en,ar);$('save-notice').classList.remove('hidden');if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(()=>$('save-notice').classList.add('hidden'),2300)}
 function validCheckpoint(s){return s&&s.schema===2&&['after_checkpoint','after_town_raid','town_resolved'].includes(s.id)&&Array.isArray(s.party)&&s.party.length>=2&&s.party.length<=4&&s.party.every(h=>baseStats[h.name]&&Number.isInteger(h.level)&&h.level>=1&&h.level<100&&Number.isFinite(h.hp)&&Number.isFinite(h.ap))&&Number.isFinite(s.gold)&&s.gold>=0&&Number.isFinite(s.herbs)&&s.herbs>=0&&s.flags&&Number.isFinite(s.flags.venomRefusals)&&(s.inventory==null||(typeof s.inventory==='object'&&!Array.isArray(s.inventory)&&Object.values(s.inventory).every(n=>Number.isInteger(n)&&n>=0)))}
 function readStoredCheckpoint(){try{const value=JSON.parse(localStorage.getItem(SAVE_KEY));return validCheckpoint(value)?value:null}catch(_){return null}}
 function checkpointRecord(id){ensureEquipment();if(['arena_1','arena_2','arena_3'].includes(id))id='before_arena';return{schema:2,id,returnScene:id==='before_arena'?'world':null,party:copy(state.party),gold:state.gold,herbs:state.herbs,blueHerbs:state.blueHerbs||0,inventory:copy(state.inventory||{}),scoutMet:state.scoutMet,chestOpened:state.chestOpened,flags:Object.fromEntries(Object.keys(chapterFlags()).map(k=>[k,state[k]]))}}
 function saveCheckpoint(id){const record=checkpointRecord(id);if(state.devTesting){developmentCheckpoint=record;saveNotice('Test checkpoint saved','حُفظت نقطة عودة للاختبار');return}checkpoint=record;let persistent=true;try{localStorage.setItem(SAVE_KEY,JSON.stringify(checkpoint))}catch(_){persistent=false}saveNotice(persistent?'Autosaved':'Checkpoint saved for this session',persistent?'تم الحفظ التلقائي':'حُفظت نقطة العودة لهذه الجلسة');updateContinueButton()}
 function updateContinueButton(){if(!checkpoint)checkpoint=readStoredCheckpoint();$('continue-game').classList.toggle('hidden',state.mode!=='title'||!checkpoint);$('continue-game').textContent=tr('Continue saved game','متابعة اللعبة المحفوظة')}
-function abortCurrentFlow(){resetJoystick();state.session++;state.rallyPlaying=false;if(typeTimer)clearInterval(typeTimer);typeTimer=null;typing=false;state.dialogueResolve=null;state.choiceResolve=null;if(state.choiceUnlockTimer)clearTimeout(state.choiceUnlockTimer);state.choiceLocked=false;state.keys={};state.battle=null;for(const el of [ui.title,ui.end,ui.dialogue,ui.options,ui.battle,$('stats-screen'),$('shop-screen'),$('market-screen'),$('dev-screen')])el.classList.add('hidden');ui.fade.classList.remove('on');$('enemy-targets')?.remove();$('continue-game').classList.add('hidden')}
+function abortCurrentFlow(){resetJoystick();state.session++;state.rallyPlaying=false;if(typeTimer)clearInterval(typeTimer);typeTimer=null;typing=false;state.dialogueResolve=null;state.choiceResolve=null;if(state.choiceUnlockTimer)clearTimeout(state.choiceUnlockTimer);state.choiceLocked=false;state.keys={};state.battle=null;for(const el of [ui.title,ui.end,ui.dialogue,ui.options,ui.battle,$('stats-screen'),$('market-screen'),$('dev-screen')])el.classList.add('hidden');ui.fade.classList.remove('on','inn-rest');$('enemy-targets')?.remove();$('continue-game').classList.add('hidden')}
 function restoreCheckpoint(){const saved=state.devTesting?developmentCheckpoint:(checkpoint||readStoredCheckpoint());if(!validCheckpoint(saved))return false;if(!state.devTesting)checkpoint=saved;abortCurrentFlow();state.party=copy(saved.party);state.gold=saved.gold;state.herbs=saved.herbs;state.blueHerbs=saved.blueHerbs||0;state.inventory=copy(saved.inventory||{});ensureInventory();state.scoutMet=saved.scoutMet;state.chestOpened=saved.chestOpened;Object.assign(state,chapterFlags(),saved.flags);state.mayorHome=saved.flags.mayorHome??saved.flags.townRaidCleared;state.level=state.party.find(h=>h.name==='Astro').level;state.journey=true;state.burning=false;ensureEquipment();if(saved.id==='after_checkpoint')setupWorld(150,650);else setupTown(256,250);resumeChapterMap();startMusic('village');return true}
 function resumeChapterMap(){if(state.scene==='world'&&!state.rallySeen){showRaymondRally();return}state.mode='map';state.keys={};state.battle=null;state.trail=[];state.encounterDistance=0;state.nextEncounter=nextEncounterDistance();state.lastMovementAt=performance.now();ui.battle.classList.add('hidden');ui.dialogue.classList.add('hidden');ui.end.classList.add('hidden');ui.map.classList.remove('hidden');$('stats-button').classList.add('available');chapterObjective();updatePrompt()}
 function chapterObjective(){const objectives={world:tr('WORLD · ASTERFORD TO THE NORTHEAST','العالم · أسترفورد إلى الشمال الشرقي'),town:tr('ASTERFORD · EXPLORE / VISIT THE MAYOR','أسترفورد · استكشف وتحدث مع الزعيم'),inn:tr('ASTERFORD INN · REST FOR 10 GOLD','نزل أسترفورد · الراحة بـ10 عملات'),apothecary:tr('APOTHECARY · HERBS AND BLUE HERBS','متجر الأعشاب · صحة وطاقة'),forge:tr('BLACKSMITH · WEAPONS AND ARMOR','الحداد · أسلحة وتجهيزات'),manor:state.venomJoined?tr('MAYOR\'S HOUSE · PREPARE FOR VALDORN','منزل الزعيم · استعدوا لفالدور'):state.venomState==='jailed'||state.venomState==='rejected'?tr('MAYOR\'S HOUSE · THE PRISONER','منزل الزعيم · السجين'):tr('MAYOR\'S HOUSE · TALK / GUEST BEDS','منزل الزعيم · تحدث / أسرّة الضيوف'),rally:tr('VALDORN · CITADEL SQUARE','فالدور · ساحة القلعة'),raymond_private:tr('VALDORN CITADEL · BEHIND CLOSED DOORS','قلعة فالدور · خلف الأبواب المغلقة')};ui.objective.textContent=objectives[state.scene]||ui.objective.textContent}
 journeyObjective=function(){if(chapterScene())chapterObjective();else chapterPrevious.journeyObjective()};
 returnToJourney=function(){if(chapterScene())resumeChapterMap();else chapterPrevious.returnToJourney()};
-function partySprites(x,y){const sprites=state.party.map((h,i)=>entity(h.name,x-i*20,y,colors[h.name],{follower:i>0}));state.player=sprites[0];return sprites}
+function partySprites(x,y){const sprites=state.party.map((h,i)=>entity(h.name,x-i*PARTY_SPACING,y,colors[h.name],{follower:i>0}));state.player=sprites[0];return sprites}
 function setupWorld(x=150,y=650){state.scene='world';state.journey=true;state.postCheckpoint=true;state.entities=partySprites(x,y);state.camera={x:0,y:0}}
 const WORLD={w:1152,h:768,town:{x:940,y:240},capital:{x:1040,y:85},pass:{x:150,y:650},mountains:[[340,80,180,100],[760,490,235,115],[180,320,120,135]]};
 function setupTown(x=256,y=250){state.scene='town';state.entities=partySprites(x,y);const residents=[
@@ -99,17 +99,22 @@ function drawWeaponForge(building){
 }
 const TOWN_BUILDINGS=[{id:'forge',x:18,y:30,w:120,h:86,door:{x:70,y:111},art:{x:7,y:23,w:140,h:93},label:'FORGE'},{id:'manor',x:176,y:0,w:160,h:107,door:{x:256,y:106},depthY:96,art:{x:176,y:0,w:160,h:107},label:'MAYOR'},{id:'inn',x:18,y:130,w:120,h:80,door:{x:78,y:222},art:{x:18,y:130,w:120,h:80},label:'INN'},{id:'apothecary',x:374,y:128,w:120,h:80,door:{x:434,y:220},art:{x:374,y:128,w:120,h:80},label:'HERBS'}];
 const MANOR_LABELS={foyer:['Entrance hall','قاعة المدخل'],study:['Rowan\'s study','غرفة دراسة روان'],guest:['Guest bedroom','غرفة الضيوف'],cell:['Holding cell','غرفة الاحتجاز']};
-const MANOR_DOORS=[{id:'guest',x:80,y:104,label:MANOR_LABELS.guest},{id:'study',x:432,y:104,label:MANOR_LABELS.study},{id:'cell',x:432,y:216,label:MANOR_LABELS.cell}];
-function setupManorRoom(room='foyer',x=256,y=252){state.scene='manor';state.manorRoom=MANOR_LABELS[room]?room:'foyer';state.camera={x:0,y:0};state.entities=partySprites(x,y);if(room==='study'&&(state.mayorHome||state.nightActive))state.entities.push(entity('Mayor Rowan',386,119,'#8b7663',{townTalk:'chief'}));if(room==='cell'&&['jailed','rejected'].includes(state.venomState))state.entities.push(entity('Venom',417,209,colors.Venom,{townTalk:'venom'}))}
-function manorInteraction(){const p=state.player,near=(x,y,r=27)=>Math.hypot(p.x-x,p.y-y)<r;if((state.manorRoom||'foyer')==='foyer'){const door=MANOR_DOORS.find(d=>near(d.x,d.y));if(door)return{type:'manorDoor',id:door.id,en:'A  Enter '+door.label[0],ar:'A  ادخل '+door.label[1]};if(near(256,268))return{type:'exit',en:'A  Leave Rowan\'s house',ar:'A  غادر منزل روان'}}else{if(near(256,268))return{type:'manorDoor',id:'foyer',en:'A  Return to the hall',ar:'A  عد إلى قاعة المدخل'};if(state.manorRoom==='guest'&&near(256,148,32))return{type:'bed',en:state.nightDone?'A  Inspect guest beds':'A  Rest / begin the night',ar:state.nightDone?'A  تفقد أسرّة الضيوف':'A  استرح / ابدأ أحداث الليل'}}return null}
-async function switchManorRoom(room){const token=state.session,previous=state.manorRoom||'foyer';state.mode='cutscene';await fadeScene('manor');if(token!==state.session)return;if(room==='foyer'){const door=MANOR_DOORS.find(d=>d.id===previous);setupManorRoom('foyer',door?door.x+(door.x<256?28:-28):256,door?.y||250)}else setupManorRoom(room);resumeChapterMap()}
-function blockedManor(x,y){if(x<76||x>436||y<40||y+9>282)return true;if(actorsBlockFeet(x,y))return true;const room=state.manorRoom||'foyer',boxes=room==='guest'?[[137,67,82,71],[271,67,82,71]]:room==='study'?[[311,65,94,34],[101,53,91,21]]:room==='cell'?[[306,186,138,6],[306,186,7,82],[341,241,36,16]]:[[140,188,69,22]];return boxes.some(b=>footHitsRect(x,y,...b))}
-function drawManorRoom(){const room=state.manorRoom||'foyer';rect(0,0,512,288,'#0b0e1a');rect(64,24,384,264,'#5e493c');for(let y=36;y<282;y+=16)for(let x=76;x<436;x+=24){rect(x,y,22,14,'#85664d');rect(x,y+13,22,1,'#624839')}rect(64,24,384,12,'#353541');rect(64,24,10,264,'#353541');rect(438,24,10,264,'#353541');ctx.fillStyle='#ead5a3';ctx.font=state.lang==='ar'?'11px Arial':'10px monospace';ctx.textAlign='center';ctx.fillText(tr(...MANOR_LABELS[room]),256,49);
- if(room==='foyer'){rect(140,188,69,22,'#6f513b');rect(248,77,16,88,'#675948');for(const door of MANOR_DOORS){rect(door.x<256?64:430,door.y-17,18,35,'#1a202d');ctx.fillStyle='#e6d4a9';ctx.font=state.lang==='ar'?'9px Arial':'8px monospace';ctx.textAlign=door.x<256?'left':'right';ctx.fillText(tr(...door.label),door.x<256?91:420,door.y-21)}}
- if(room==='guest'){for(const x of [140,274]){rect(x,70,76,65,'#d0c3a5');rect(x+4,82,68,49,'#5c6d98');rect(x+5,72,66,10,'#eee4d0')}rect(244,145,24,8,'#a1a57c');ctx.fillStyle='#ecd7ad';ctx.font=state.lang==='ar'?'9px Arial':'8px monospace';ctx.fillText(tr('REST','راحة'),256,166)}
- if(room==='study'){rect(314,68,88,28,'#82583b');rect(323,74,29,14,'#e8dbaf');rect(104,55,85,18,'#75573f');for(let x=109;x<184;x+=10)rect(x,43,7,15,x%3?'#93835d':'#556d85');rect(234,76,32,74,'#806f56')}
- if(room==='cell'){rect(313,192,127,82,'#665b50');rect(341,241,36,16,'#8c836d');rect(306,186,7,82,'#44444b');for(let x=310;x<445;x+=11)rect(x,175,3,22,'#a0a4b0');rect(306,187,138,5,'#696974')}
- rect(243,264,26,23,'#151924');state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite);if(state.nightActive)rect(0,0,512,288,'#10133855')}
+const MANOR_DOORS=[{id:'guest',x:137,y:76,label:MANOR_LABELS.guest},{id:'study',x:256,y:76,label:MANOR_LABELS.study},{id:'cell',x:375,y:76,label:MANOR_LABELS.cell}];
+function setupManorRoom(room='foyer',x=256,y=252){state.scene='manor';state.manorRoom=MANOR_LABELS[room]?room:'foyer';state.camera={x:0,y:0};state.entities=partySprites(x,y);if(room==='study'&&(state.mayorHome||state.nightActive))state.entities.push(entity('Mayor Rowan',386,119,'#8b7663',{townTalk:'chief'}));if(room==='cell'&&['jailed','rejected'].includes(state.venomState))state.entities.push(entity('Venom',408,208,colors.Venom,{townTalk:'venom'}))}
+function manorInteraction(){const p=state.player,near=(x,y,r=27)=>Math.hypot(p.x-x,p.y-y)<r;if((state.manorRoom||'foyer')==='foyer'){if(!state.manorChestOpened&&near(manorChest.x,manorChest.base))return{type:'manorChest',en:'A  Open chest',ar:'A  \u0627\u0641\u062a\u062d \u0627\u0644\u0635\u0646\u062f\u0648\u0642'};const door=MANOR_DOORS.find(d=>near(d.x,d.y));if(door)return{type:'manorDoor',id:door.id,en:'A  Enter '+door.label[0],ar:'A  ادخل '+door.label[1]};if(near(256,268))return{type:'exit',en:'A  Leave Rowan\'s house',ar:'A  غادر منزل روان'}}else{if(near(256,268))return{type:'manorDoor',id:'foyer',en:'A  Return to the hall',ar:'A  عد إلى قاعة المدخل'};if(state.manorRoom==='guest'&&nearGuestBed(p))return{type:'bed',en:state.nightDone?'A  Inspect guest beds':'A  Rest / begin the night',ar:state.nightDone?'A  تفقد أسرّة الضيوف':'A  استرح / ابدأ أحداث الليل'}}return null}
+async function switchManorRoom(room){const token=state.session,previous=state.manorRoom||'foyer';state.mode='cutscene';await fadeScene('manor');if(token!==state.session)return;if(room==='foyer'){const door=MANOR_DOORS.find(d=>d.id===previous);setupManorRoom('foyer',door?.x||256,door?door.y+22:250)}else setupManorRoom(room);resumeChapterMap()}
+function openManorChest(){
+ if(state.mode!=='map'||state.scene!=='manor'||manorInteraction()?.type!=='manorChest')return;
+ state.manorChestOpened=true;
+ state.gold+=100;
+ const saved=state.devTesting?developmentCheckpoint:checkpoint;
+ saveCheckpoint(validCheckpoint(saved)?saved.id:'after_town_raid');
+ tradeChime(true);
+ saveNotice('Found 100 gold','\u0639\u062b\u0631\u062a \u0639\u0644\u0649 100 \u0642\u0637\u0639\u0629 \u0630\u0647\u0628\u064a\u0629');
+ updatePrompt();
+}
+function blockedManor(x,y){return roomBlocksFeet(x,y)}
+function drawManorRoom(){drawFurnishedRoom()}
 function setupInterior(kind){state.scene=kind;state.entities=partySprites(kind==='manor'?224:256,255);
  if(kind==='inn')state.entities.push(entity('Innkeeper Sela',222,117,'#b48875',{service:'inn'}));
  if(kind==='apothecary')state.entities.push(entity('Apothecary Lysa',256,121,'#6f927f',{service:'supplies'}));
@@ -125,43 +130,52 @@ function newSceneInteraction(){if(!state.player)return null;const p=state.player
  if(state.scene==='manor')return manorInteraction();return null;
 }
 updatePrompt=function(){if(!chapterScene()){chapterPrevious.updatePrompt();return}const npc=state.entities.find(e=>e!==state.player&&!e.follower&&(e.townTalk||e.service)&&Math.hypot(state.player.x-e.x,state.player.y-e.y)<36),point=newSceneInteraction();state.chapterNpc=npc;ui.prompt.classList.toggle('hidden',!npc&&!point);if(npc)ui.prompt.textContent=tr('A  Talk to '+npc.name,'A  تحدث مع '+({'Venom':'فينوم','Mayor Rowan':'الزعيم روان','Nella':'نيلا','Bram':'برام','Iris':'آيريس','Innkeeper Sela':'صاحبة النزل','Apothecary Lysa':'بائعة الأعشاب','Smith Garr':'الحداد'}[npc.name]||npc.name));else if(point)ui.prompt.textContent=tr(point.en,point.ar)};
-interact=function(){if(state.mode!=='map'||!chapterScene()){chapterPrevious.interact();return}updatePrompt();const npc=state.chapterNpc,point=newSceneInteraction();if(npc){if(npc.service)talkToService(npc);else if(npc.townTalk==='venom')talkToVenom();else if(npc.townTalk==='chief')talkToChief();else talkToResident(npc.townTalk);return}if(!point)return;
+interact=function(){if(state.mode!=='map'||!chapterScene()){chapterPrevious.interact();return}updatePrompt();const npc=state.chapterNpc,point=newSceneInteraction();if(npc){faceConversation(npc,state.player);if(npc.service)talkToService(npc);else if(npc.townTalk==='venom')talkToVenom();else if(npc.townTalk==='chief')talkToChief();else talkToResident(npc.townTalk);return}if(!point)return;
+ if(point.type==='manorChest'){openManorChest();return}
  if(point.type==='manorDoor'){switchManorRoom(point.id);return}if(point.type==='town')enterAsterford();if(point.type==='forest'){state.mode='cutscene';returnToForest()}if(point.type==='building')enterTownBuilding(point.id);if(point.type==='exit')leaveTownBuilding();if(point.type==='world'){state.mode='cutscene';setupWorld(940,282);resumeChapterMap()}if(point.type==='bed')beginNight();if(point.type==='ridge')sayAndResume([D('Astro','The road to Blackglass Ridge is closed. We should learn what is happening in Asterford first.','الطريق إلى مرتفع الزجاج الأسود مغلق. علينا معرفة ما يجري في أسترفورد أولًا.')]);
- if(point.type==='capital')sayAndResume([D('Astro','Valdorn. The great city beneath Raymond\'s citadel. The Brotherhood of Dawn checks every traveler at its gates. We need a way through before we go there.','فالدور. المدينة الكبرى تحت قلعة ريموند. تفتش أخوية الفجر كل مسافر عند بواباتها. نحتاج إلى طريقة للعبور قبل الذهاب إليها.')]);
+ if(point.type==='capital')sayAndResume([D('Astro','Valdorn. The great city beneath Raymond\'s citadel. The Brotherhood of Dawn checks every traveler at its gates. We need a way through before we go there.','فالدور. المدينة الكبرى تحت قلعة رايموند. تفتش أخوية الفجر كل مسافر عند بواباتها. نحتاج إلى طريقة للعبور قبل الذهاب إليها.')]);
 };
 blocked=function(x,y){if(!chapterScene())return chapterPrevious.blocked(x,y);if(state.scene==='world'){if(x<85||x>WORLD.w-40||y<40||y>WORLD.h-35)return true;if(((x-585)/105)**2+((y-426)/85)**2<1)return true;return WORLD.mountains.some(([bx,by,w,h])=>x>bx-7&&x<bx+w+7&&y>by-7&&y<by+h+7)}
  const person=actorsBlockFeet(x,y);
  if(state.scene==='town'){if(x<12||x>500||y<18||y+9>282)return true;return person||TOWN_BUILDINGS.some(b=>buildingBlocksFeet(x,y,b))}
  if(state.scene==='manor')return blockedManor(x,y);
- if(['inn','apothecary','forge'].includes(state.scene)){if(x<138||x>374||y<45||y>275)return true;return person||footHitsRect(x,y,186,70,140,26)||(state.scene==='inn'&&footHitsRect(x,y,285,156,54,65))}return person;
+ if(['inn','apothecary','forge'].includes(state.scene))return roomBlocksFeet(x,y);return person;
 };
-update=function(){if(!chapterScene()){chapterPrevious.update();return}const now=performance.now();state.frameScale=state.lastMovementAt==null?1:Math.min(3,Math.max(0,(now-state.lastMovementAt)/(1000/60)));state.lastMovementAt=now;const p=state.player,x=p?.x,y=p?.y;old.update();if(state.mode!=='map'||!p)return;const distance=Math.hypot(p.x-x,p.y-y);if(distance>.05){const last=state.trail[state.trail.length-1];if(!last||Math.hypot(p.x-last.x,p.y-last.y)>3)state.trail.push({x:p.x,y:p.y,dir:p.dir});while(state.trail.length>20)state.trail.shift();state.party.slice(1).forEach((h,i)=>{const f=find(h.name),point=state.trail[Math.max(0,state.trail.length-1-(i+1)*8)];if(f&&point)Object.assign(f,point)});if(state.scene==='world')state.encounterDistance+=distance}if(state.scene==='world'&&distance>0&&!newSceneInteraction()&&state.encounterDistance>=state.nextEncounter)startEncounter('world')};
+update=function(){if(!chapterScene()){chapterPrevious.update();return}const now=performance.now();state.frameScale=state.lastMovementAt==null?1:Math.min(3,Math.max(0,(now-state.lastMovementAt)/(1000/60)));state.lastMovementAt=now;const p=state.player,x=p?.x,y=p?.y;old.update();if(state.mode!=='map'||!p)return;const distance=Math.hypot(p.x-x,p.y-y);if(distance>.05){followPartyRoute(x,y);if(state.scene==='world')state.encounterDistance+=distance}if(state.scene==='world'&&distance>0&&!newSceneInteraction()&&state.encounterDistance>=state.nextEncounter)startEncounter('world')};
 function drawWorld(){const p=state.player||{x:150,y:650},cam={x:Math.max(0,Math.min(WORLD.w-512,p.x-256)),y:Math.max(0,Math.min(WORLD.h-288,p.y-144))};state.camera=cam;ctx.save();ctx.translate(-cam.x,-cam.y);for(let y=Math.floor(cam.y/16)*16;y<cam.y+304;y+=16)for(let x=Math.floor(cam.x/16)*16;x<cam.x+528;x+=16)tileNoise(x,y,x<80?'#315b86':'#4d744e',x<80?'#467a9b':'#416447');ctx.fillStyle='#315b86';ctx.beginPath();ctx.ellipse(585,426,105,85,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b4a07b';ctx.lineWidth=18;ctx.beginPath();[[150,650],[430,650],[430,280],[940,280],[940,240]].forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();WORLD.mountains.forEach(([x,y,w,h])=>{rect(x,y,w,h,'#53616b');for(let i=0;i<w;i+=32){ctx.fillStyle='#84918c';ctx.beginPath();ctx.moveTo(x+i,y+h);ctx.lineTo(x+i+18,y-16);ctx.lineTo(x+i+36,y+h);ctx.fill()}});for(const [x,y] of [[160,560],[225,620],[660,220],[720,260],[820,180],[980,350],[410,215],[365,690]])tree(x,y);house(918,194,44,32,false);house(970,218,30,25,false);rect(136,620,28,23,'#4d4b59');rect(144,620,12,23,'#1d2332');rect(892,62,38,38,'#737281');rect(1010,65,60,36,'#c5bca0');rect(1010,62,12,46,'#939582');rect(1058,62,12,46,'#939582');for(let i=0;i<4;i++)rect(1026+i*8,70,5,7,'#466479');ctx.fillStyle='#f1dfaa';ctx.font=state.lang==='ar'?'10px Arial':'9px monospace';ctx.textAlign='center';ctx.fillText(tr('ASTERFORD','أسترفورد'),948,183);ctx.fillText(tr('GREY PASS','الممر الرمادي'),151,613);ctx.fillText(tr('BLACKGLASS RIDGE','مرتفع الزجاج الأسود'),911,53);ctx.fillText(tr('VALDORN','فالدور'),1040,53);state.entities.forEach(drawSprite);ctx.restore();rect(406,8,98,65,'#0b1937df');rect(412,14,86,49,'#496b48');rect(412,14,8,49,'#37688f');WORLD.mountains.forEach(([x,y,w,h])=>rect(412+x/WORLD.w*86,14+y/WORLD.h*49,w/WORLD.w*86,h/WORLD.h*49,'#8b9386'));rect(412+940/WORLD.w*86,14+240/WORLD.h*49,4,4,'#ffe18b');rect(412+1040/WORLD.w*86,14+85/WORLD.h*49,4,4,'#c9dcff');rect(412+p.x/WORLD.w*86,14+p.y/WORLD.h*49,3,3,'#fff')}
-function drawTown(){for(let y=0;y<288;y+=16)for(let x=0;x<512;x+=16)grassTile(x,y,GRASS_PALETTES.asterford);rect(230,0,52,288,'#a49377');rect(0,112,512,62,'#a49377');rect(0,211,512,35,'#a49377');drawOutdoorLayers(TOWN_BUILDINGS,b=>{if(b.id==='forge')drawWeaponForge(b);else if(b.id==='manor')drawExteriorBuilding(b,'mayor',()=>house(b.x,b.y,b.w,b.h,false));else if(b.id==='inn')drawExteriorBuilding(b,'inn',()=>house(b.x,b.y,b.w,b.h,false));else if(b.id==='apothecary')drawExteriorBuilding(b,'herbs',()=>house(b.x,b.y,b.w,b.h,false));else house(b.x,b.y,b.w,b.h,false)});rect(154,41,7,28,'#544939');rect(144,33,28,17,'#426a8d');rect(350,69,7,28,'#544939');rect(340,61,28,17,'#426a8d');if(!state.townRaidCleared)rect(0,0,512,288,'#922b1a25')}
-function drawInterior(){if(state.scene==='manor'){drawManorRoom();return}rect(0,0,512,288,'#0b0e1a');const room=[130,35,252,253];rect(...room,'#5e493c');for(let y=room[1]+8;y<282;y+=16)for(let x=room[0]+8;x<room[0]+room[2]-8;x+=24){rect(x,y,22,14,'#85664d');rect(x,y+13,22,1,'#624839')}rect(room[0],room[1],room[2],10,'#353541');rect(room[0],room[1],8,room[3],'#353541');rect(room[0]+room[2]-8,room[1],8,room[3],'#353541');rect(186,70,140,26,'#473932');rect(193,72,126,7,'#bb9865');if(state.scene==='inn'){rect(285,156,54,65,'#c0b69c');rect(290,171,44,46,'#8c657e');rect(290,159,44,10,'#eadfcc')}if(state.scene==='apothecary')for(let x=166;x<352;x+=23)rect(x,48,9,13,x%2?'#7aaa70':'#778bd0');if(state.scene==='forge'){rect(148,121,25,32,'#3c4651');rect(152,112,17,12,'#808a92');for(let x=160;x<352;x+=30)line(x,47,x+12,63,'#c8cbd2',3)}rect(243,265,26,22,'#151924');state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite)}
+function drawTown(){groundMaterial('meadow',0,0,512,288,GRASS_PALETTES.asterford[0]);groundMaterial('dirt',230,0,52,288,'#a49377');groundMaterial('dirt',0,112,512,62,'#a49377');groundMaterial('dirt',0,211,512,35,'#a49377');for(const [x,y] of [[29,105],[171,182],[315,270],[460,257]])paintProp('ferns',x,y,22,13);drawOutdoorLayers(TOWN_BUILDINGS,b=>{if(b.id==='forge')drawWeaponForge(b);else if(b.id==='manor')drawExteriorBuilding(b,'mayor',()=>house(b.x,b.y,b.w,b.h,false));else if(b.id==='inn')drawExteriorBuilding(b,'inn',()=>house(b.x,b.y,b.w,b.h,false));else if(b.id==='apothecary')drawExteriorBuilding(b,'herbs',()=>house(b.x,b.y,b.w,b.h,false));else house(b.x,b.y,b.w,b.h,false)});paintProp('banner',157,69,25,39);paintProp('banner',354,97,25,39);if(!state.townRaidCleared)rect(0,0,512,288,'#922b1a25')}
+function drawInterior(){drawFurnishedRoom()}
+function rallyCast(rows) {
+ // The balcony deck is at y=78; the plaza, fountain and canal use other planes.
+ const cast=[entity('Raymond',256,70,colors.Raymond,{dir:'down',mapScale:.91})];
+ const roles=['townsman','townswoman','smith','elder','scout','child'];
+ for(let row=0;row<rows;row++)for(let col=0;col<9;col++){
+  const x=87+col*42+(row%2)*7, feet=157+row*16;
+  if(((x-256)/70)**2+((feet-180)/29)**2<1)continue;
+  if((Math.abs(x-95)<9||Math.abs(x-417)<9)&&feet<194)continue;
+  const n=row*9+col;
+  cast.push(entity('Citizen '+n,x,feet-8,'#8a7359',{
+   dir:'up',mapRole:roles[(col+row*2)%roles.length],mapScale:.80+row*.04
+  }));
+ }
+ return cast;
+}
 function drawRally(){
- rect(0,0,512,288,'#89abc0');rect(0,108,512,180,'#aaa58e');
- // Valdorn's citadel overlooks a paved civic square, workshops and a canal.
- rect(143,18,226,83,'#d1c8a9');rect(144,19,225,10,'#ede0b6');rect(173,39,166,58,'#bab08d');
- for(const x of [125,359]){rect(x,8,28,111,'#918c7b');rect(x+3,12,22,106,'#c2b897');for(let k=0;k<3;k++)rect(x+k*10,2,7,14,'#ddd1ac');rect(x+9,41,10,21,'#364659')}
- for(const x of [178,239,300]){rect(x,42,29,38,'#62636a');rect(x+4,45,21,33,'#243443');rect(x+13,45,2,33,'#aba586')}
- rect(186,91,140,24,'#817b66');rect(177,112,158,8,'#e9d8a1');rect(182,112,148,3,'#f2e7c5');
- for(const x of [186,201,216,231,246,261,276,291,306,321])rect(x,109,3,14,'#ddd0ab');
- for(const x of [162,334]){rect(x,45,18,42,'#546b8a');rect(x+7,54,5,17,'#efd87b');rect(x+3,62,12,3,'#efd87b')}
- for(const [x,y,w,h] of [[3,81,96,58],[400,72,105,67],[8,173,58,70],[445,175,59,70]]){house(x,y,w,h,false);for(let wx=x+10;wx<x+w-8;wx+=23)rect(wx,y+13,12,15,'#7c9eb2');rect(x+4,y+h-3,w-8,8,'#638c9e')}
- for(let y=139;y<288;y+=14)for(let x=70;x<440;x+=28){rect(x+(y%28?0:14),y,24,2,'#beb8a0');rect(x,y,1,12,'#9b967f')}
- rect(0,254,512,34,'#477f98');rect(0,251,512,5,'#d1c5a3');rect(227,244,58,44,'#a99e83');rect(232,253,48,3,'#e2d4b1');
- for(const x of [78,432]){rect(x,132,3,93,'#484e5e');rect(x-6,126,15,15,'#e8d59b');rect(x-4,129,11,9,'#fff1b9')}
- rect(220,170,72,9,'#7a8a88');rect(228,174,56,28,'#88b4bd');rect(234,179,44,14,'#bed9d3');rect(253,153,6,28,'#c7c5ad');
+ const backdrop=visualImage('scenery/citadel-square.webp');
+ if(!paintScene('citadel-square'))groundMaterial('pavers',0,0,512,288,'#aaa58e');
  state.entities.slice().sort((a,b)=>a.y-b.y).forEach(drawSprite);
+ if(imageReady(backdrop)){
+  // Composite the original stone balustrade in front of the speaker's legs.
+  const sx=backdrop.width/512,sy=backdrop.height/288;
+  ctx.drawImage(backdrop,239*sx,69*sy,34*sx,12*sy,239,69,34,12);
+ }
  ctx.fillStyle='#fff0c8';ctx.font=state.lang==='ar'?'10px Arial':'9px monospace';ctx.textAlign='center';ctx.fillText(tr('VALDORN · CITADEL SQUARE','فالدور · ساحة القلعة'),256,15)
 }
-
 draw=function(){state.time=performance.now();if(state.mode==='battle'||state.mode==='battleBusy'||(state.mode==='stats'&&state.statsReturn==='battle'))drawBattle();else if(state.scene==='world')drawWorld();else if(state.scene==='town')drawTown();else if(['inn','apothecary','forge','manor'].includes(state.scene))drawInterior();else if(state.scene==='rally')drawRally();else if(state.scene==='raymond_private')drawRaymondPrivate();else if(state.scene==='throne')drawThrone();else if(state.scene==='shrine')drawShrine();else if(['forest','pass'].includes(state.scene))drawJourneyMap();else drawVillage();requestAnimationFrame(draw)};
 async function sayAndResume(lines){const token=state.session;state.mode='cutscene';ui.map.classList.add('hidden');await say(lines);if(token===state.session)resumeChapterMap()}
 const RESIDENT_LINES={
  nella:[D('Nella','Welcome to Asterford. You stood beside us before you even knew our names. You will find friends here.','مرحبًا بكما في أسترفورد. وقفتما معنا قبل أن تعرفا أسماءنا. ستجدان أصدقاء هنا.'),D('Nella','The Brotherhood of Dawn offered us grain in exchange for our children\'s names. Mayor Rowan refused.','عرضت أخوية الفجر علينا الحبوب مقابل أسماء أطفالنا. رفض الزعيم روان.')],
- bram:[D('Bram','Raymond speaks beautifully. I heard him promise bread, safety, and a star returned to the sky.','ريموند يتحدث ببراعة. سمعته يعد بالخبز والأمان وعودة نجمة إلى السماء.'),D('Bram','Then the Brotherhood of Dawn arrived with a list of houses to empty. We are one of the few towns that still says no.','ثم وصلت أخوية الفجر ومعها قائمة ببيوت تريد إفراغها. نحن من المدن القليلة التي ما زالت تقول لا.')],
+ bram:[D('Bram','Raymond speaks beautifully. I heard him promise bread, safety, and a star returned to the sky.','رايموند يتحدث ببراعة. سمعته يعد بالخبز والأمان وعودة نجمة إلى السماء.'),D('Bram','Then the Brotherhood of Dawn arrived with a list of houses to empty. We are one of the few towns that still says no.','ثم وصلت أخوية الفجر ومعها قائمة ببيوت تريد إفراغها. نحن من المدن القليلة التي ما زالت تقول لا.')],
  iris:[D('Iris','The inn is southwest. Herbs are southeast. The smith works in the northwest building.','النزل في الجنوب الغربي، ومتجر الأعشاب في الجنوب الشرقي، والحداد في المبنى الشمالي الغربي.'),D('Iris','My brother repairs bows. Maybe one day you will bring an archer who can test them.','أخي يصلح الأقواس. ربما تحضرون يومًا رامياً يجربها.')],
  rowan:[D('Mayor Rowan','You have our gratitude. Visit the shops, meet our people, then find me in the study of my house to the north.','لكما امتناننا. زورا المتاجر وتعرفا على أهلنا، ثم ابحثا عني في غرفة الدراسة في منزلي شمالًا.')]
 };
@@ -170,8 +184,7 @@ function persistRallySeen(){const saved=state.devTesting?developmentCheckpoint:c
 async function showRaymondRally(){
  if(state.rallyPlaying)return;const token=state.session,returnPosition=state.scene==='world'&&state.player?{x:state.player.x,y:state.player.y}:{x:150,y:650};state.rallyPlaying=true;state.mode='cutscene';state.keys={};resetJoystick();ui.map.classList.add('hidden');
  await fadeScene('rally');if(token!==state.session)return;
- const citizens=Array.from({length:32},(_,i)=>{const row=Math.floor(i/8),col=i%8;return entity('Citizen '+i,96+col*45+(row%2?9:0),150+row*28,['#698090','#917254','#7c8e68','#9b788b'][i%4])}).filter(e=>Math.hypot(e.x-256,e.y-187)>45);
- state.entities=[entity('Raymond',256,105,colors.Raymond,{dir:'down'}),...citizens];chapterObjective();startMusic('village');
+ state.entities=rallyCast(4);chapterObjective();startMusic('village');
  await say([
  D('Raymond','People of Valdorn. Together, we turned the fortress of the old families into the home of our revolution.','يا أهل فالدور. معًا حوّلنا حصن العائلات القديمة إلى بيت ثورتنا.'),
  D('Citizen','One people! One dawn! No more chains!','شعب واحد! فجر واحد! لا قيود بعد اليوم!'),
@@ -191,7 +204,7 @@ async function showRaymondRally(){
  D('Raymond','Only do not leave me alone with what you have made of me.','فقط لا تتركني وحيدًا مع ما جعلتني عليه.')
  ]);if(token!==state.session)return;state.rallySeen=true;state.rallyPlaying=false;persistRallySeen();setupWorld(returnPosition.x,returnPosition.y);resumeChapterMap();startMusic('village')
 }
-finishCheckpoint=async function(){const token=state.session;await say([D('Varek','The Brotherhood of Dawn has already sent another company to Asterford. They refused its protection.','أرسلت أخوية الفجر مجموعة أخرى إلى أسترفورد بالفعل. لقد رفضوا حمايتها.'),D('Shadow','Which road?','أي طريق؟'),D('Varek','Northeast, beyond Mistwood. The map is in my coat.','الشمال الشرقي، خلف غابة الضباب. الخريطة في معطفي.'),D('Astro','I assume your definition of protection involves fewer surviving buildings than mine.','أفترض أن تعريفكم للحماية يتضمن مباني ناجية أقل من تعريفي.'),D('Shadow','We leave now.','نغادر الآن.')]);if(token!==state.session)return;state.postCheckpoint=true;state.bossCleared=true;setupWorld(150,650);saveCheckpoint('after_checkpoint');await showRaymondRally()};
+finishCheckpoint=async function(){const token=state.session;await say([D('TMRH','The Brotherhood of Dawn has already sent another company to Asterford. They refused its protection.','أرسلت أخوية الفجر مجموعة أخرى إلى أسترفورد بالفعل. لقد رفضوا حمايتها.'),D('Shadow','Which road?','أي طريق؟'),D('TMRH','Northeast, beyond Mistwood. The map is in my coat.','الشمال الشرقي، خلف غابة الضباب. الخريطة في معطفي.'),D('Astro','I assume your definition of protection involves fewer surviving buildings than mine.','أفترض أن تعريفكم للحماية يتضمن مباني ناجية أقل من تعريفي.'),D('Shadow','We leave now.','نغادر الآن.')]);if(token!==state.session)return;state.postCheckpoint=true;state.bossCleared=true;setupWorld(150,650);saveCheckpoint('after_checkpoint');await showRaymondRally()};
 enterPass=async function(){if(state.postCheckpoint){setupWorld(150,650);resumeChapterMap();return}await chapterPrevious.enterPass()};
 async function enterAsterford(){const token=state.session;state.mode='cutscene';await fadeScene('town');if(token!==state.session)return;setupTown();if(state.townRaidCleared){resumeChapterMap();return}startMusic('tension');await say([D('Nella','Get inside! They have already broken the south gate!','ادخلوا! لقد كسروا البوابة الجنوبية بالفعل!'),D('Captain Darius','Last warning. Give us Rowan\'s registry and raise the Brotherhood of Dawn\'s banner.','التحذير الأخير. سلمونا سجل روان وارفعوا راية أخوية الفجر.'),D('Mayor Rowan','Asterford is not a list of names for the Brotherhood of Dawn to collect.','أسترفورد ليست قائمة أسماء لتجمعها أخوية الفجر.'),D('Astro','We have encountered the Brotherhood of Dawn\'s negotiating technique before. It seems remarkably consistent.','واجهنا أسلوب أخوية الفجر في التفاوض من قبل. يبدو ثابتًا بصورة لافتة.'),D('Shadow','Behind us.','خلفنا.'),D('Captain Darius','Then fall with them.','إذًا اسقطا معهم.')]);if(token===state.session)startChapterBattle('townRaid')}
 function startChapterBattle(kind){const enemies=kind==='townRaid'?[bossLoot(makeEnemy('Captain Darius','القائد داريوس',210,29,12,'#934d41',70,10,0),26,34),bossLoot(makeEnemy('Dawn Soldier A','جندي أخوية الفجر أ',64,20,8,colors.Soldier,18,7,0),4,6),bossLoot(makeEnemy('Dawn Soldier B','جندي أخوية الفجر ب',64,20,8,colors.Soldier,18,7,0),4,6)]:kind==='venom'?[bossLoot(makeEnemy('Venom','فينوم',215,28,10,colors.Venom,65,18,0),16,24)]:regionalEnemies(state.scene==='world'?encounterRegion():'west');state.battle={kind:'boss',scenario:kind,enemies,actor:0,acted:[],round:1,busy:false,heroLunge:0,enemyShake:false,magic:false};state.target=0;state.battleMenu='main';state.selected=0;state.mode='battle';state.keys={};ui.map.classList.add('hidden');ui.dialogue.classList.add('hidden');ui.battle.classList.remove('hidden');$('status-window').classList.add('party-status');ui.objective.textContent=kind==='townRaid'?tr('ASTERFORD · DEFEND THE TOWN','أسترفورد · تصدَّ للمهاجمين'):kind==='venom'?tr('NIGHT · VENOM','الليل · فينوم'):tr('WORLD · '+REGION_NAMES[state.scene==='world'?encounterRegion():'west'][0],'العالم · '+REGION_NAMES[state.scene==='world'?encounterRegion():'west'][1]);if(kind==='world')state.battle.kind='random';setBattleMessage(kind==='venom'?tr('Venom draws his dagger.','يشهر فينوم خنجره.'):tr('Choose a target, then a command.','حدد عدوًا، ثم اختر أمرًا.'));startMusic('battle');beginPartyRound()}
@@ -203,25 +216,118 @@ winEncounter=async function(){const b=state.battle;if(!b?.scenario){await chapte
 };
 loseEncounter=async function(){if(!state.postCheckpoint){await chapterPrevious.loseEncounter();return}const token=state.session;state.mode='cutscene';ui.battle.classList.add('hidden');$('enemy-targets')?.remove();await say([D('Astro','That attempt has ended badly. We return to the last automatic checkpoint.','انتهت هذه المحاولة على نحو سيئ. نعود إلى آخر نقطة حفظ تلقائية.')]);if(token!==state.session)return;restoreCheckpoint()};
 async function talkToService(npc){const lines={inn:[D('Innkeeper Sela','You are welcome here. Ten gold covers the whole party: beds, a hot meal, and full recovery of health and mana.','أهلًا بكم. عشر عملات تكفي الفريق كله: أسرّة ووجبة ساخنة واستعادة الصحة والمانا بالكامل.')],supplies:[D('Apothecary Lysa','A green herb restores fifty health. A blue herb restores thirty mana. Both go into your shared pack.','العشبة الخضراء تستعيد خمسين صحة، والزرقاء ثلاثين مانا. كلاهما يدخل حقيبتكم المشتركة.')],gear:[D('Smith Garr','A sword for Shadow, a staff for Astro. Daggers and bows too, when you bring someone who can use them.','سيف لشادو وعصا لأسترو. وخناجر وأقواس أيضًا، عندما تحضرون من يستطيع استخدامها.'),D('Smith Garr','Choose a companion first. Purchased equipment is fitted immediately; every slot contributes to their statistics.','اختاروا رفيقًا أولًا. تُجهّز المشتريات فورًا، وتؤثر كل قطعة في إحصائياته.')]};const token=state.session;state.mode='cutscene';await say(lines[npc.service]);if(token===state.session)openMarket(npc.service)}
-function openMarket(kind){state.market={kind,hero:0};state.mode='market';state.keys={};ui.map.classList.add('hidden');$('market-screen').classList.remove('hidden');renderMarket()}
+function openMarket(kind){state.market={kind,hero:0,tab:"buy"};state.mode='market';state.keys={};ui.map.classList.add('hidden');$('market-screen').classList.remove('hidden');renderMarket()}
 function gearBonusText(gear){return Object.entries(gear.bonus).map(([k,v])=>statLabel(k)+' '+(v>=0?'+':'')+v).join(' · ')}
+function shopButton(label,selected,action){
+ const button=document.createElement('button');button.type='button';button.className='small-button';
+ button.textContent=label;button.setAttribute('aria-pressed',String(selected));button.onclick=action;return button;
+}
+function saleStock(){
+ const {kind,hero}=state.market,h=state.party[hero];
+ if(kind==='supplies')return Object.entries(REMEDIES).filter(([id])=>remedyCount(id)>0).map(([id,item])=>({id,...item,detail:remedyDetail(item)}));
+ if(kind==='gear')return h.gearBag.filter(id=>GEAR[id]?.price>0).map(id=>({id,...GEAR[id],owned:true,detail:gearBonusText(GEAR[id])}));
+ return [];
+}
+function saleReplacement(hero,item){
+ return hero.gearBag.find(id=>id!==item.id&&GEAR[id]?.slot===item.slot&&(!GEAR[id].type||GEAR[id].type===weaponTypes[hero.name]))||null;
+}
+function sellMarketItem(id){
+ if(state.mode!=='market'||state.market.tab!=='sell')return;
+ const h=state.party[state.market.hero],row=saleStock().find(item=>item.id===id);
+ if(!row)return;
+ if(state.market.kind==='gear'){
+  if(h.equipment[row.slot]===id){
+   const replacement=saleReplacement(h,row);
+   if(row.slot==='weapon'&&!replacement)return;
+   h.equipment[row.slot]=replacement;
+  }
+  h.gearBag=h.gearBag.filter(item=>item!==id);
+  const stats=heroStats(h);h.hp=Math.min(h.hp,stats.hp);h.ap=Math.min(h.ap,stats.ap);
+ }else setRemedyCount(id,remedyCount(id)-1);
+ const coins=Math.floor(row.price/2);state.gold+=coins;
+ tradeChime(true);renderMarket(tr('Sold ','تم بيع ')+tr(row.en,row.ar)+'  +'+coins+' '+tr('gold','ذهب'));
+}
 function renderMarket(message=''){
- const m=state.market,h=state.party[m.hero];ensureEquipment();$('market-title').textContent=tr({inn:'Asterford Inn',supplies:'Lysa · Remedies',gear:'Garr · Equipment'}[m.kind],{inn:'نزل أسترفورد',supplies:'ليسا · الأدوية',gear:'غار · التجهيزات'}[m.kind]);$('market-wallet').textContent=tr('Party gold: ','ذهب الفريق: ')+state.gold+' · '+Object.entries(REMEDIES).filter(([id])=>remedyCount(id)>0||['herb','blue'].includes(id)).map(([id,item])=>tr(item.en,item.ar)+': '+remedyCount(id)).join(' · ');$('market-close').textContent=tr('Leave','غادر');$('market-message').textContent=message||(m.kind==='gear'?tr('Purchases equip immediately. Owned pieces can be refitted for free; compare the changes before buying.','تُجهز المشتريات فورًا. يمكن إعادة تجهيز القطع المملوكة مجانًا؛ قارن التغييرات قبل الشراء.'):'');$('market-party').replaceChildren();$('market-list').replaceChildren();
- if(m.kind==='gear')state.party.forEach((p,i)=>{const button=document.createElement('button');button.type='button';button.className='small-button'+(i===m.hero?' selected':'');button.textContent=p.name;button.addEventListener('click',()=>{m.hero=i;renderMarket()});$('market-party').appendChild(button)});
- marketRows().forEach(row=>{const button=document.createElement('button');button.type='button';button.className='market-row';const equipped=m.kind==='gear'&&h.equipment[row.slot]===row.id,cost=row.owned?0:row.price;button.textContent=tr(row.en,row.ar)+' · '+(row.owned?tr('Owned · equip free','مملوك · تجهيز مجاني'):cost+' '+tr('gold','ذهب'))+(equipped?tr(' · equipped',' · مجهّز'):'');const detail=document.createElement('small');detail.textContent=row.detail;button.appendChild(detail);button.disabled=state.gold<cost||equipped;button.addEventListener('click',()=>buyMarketItem(row.id));$('market-list').appendChild(button)})
+ const m=state.market,h=state.party[m.hero],inn=m.kind==='inn',gear=m.kind==='gear',selling=m.tab==='sell';
+ ensureEquipment();
+ const camp=state.scene==='forest',training=['trainingYard','holding'].includes(state.scene);
+ const names=inn?(easternMarket()?['Bellhaven Inn','نزل بيلهافن']:['Asterford Inn','نزل أسترفورد']):
+  camp?['Scout’s camp','معسكر الكشّاف']:training?['Quartermaster','أمين المؤن']:gear?(easternMarket()?['Oren’s forge','حدادة عزيز']:['Garr’s forge','حدادة غار']):(easternMarket()?['Edda’s apothecary','عطارة إيدا']:['Lysa’s apothecary','عطارة ليسا']);
+ $('market-title').textContent=tr(...names);$('market-close').textContent=tr('Leave','غادر');
+ $('market-wallet').textContent=state.gold+' '+tr('gold','ذهب');$('market-message').textContent=message;
+ const tabs=$('market-tabs');tabs.replaceChildren();
+ if(camp)for(const [kind,en,ar] of [['supplies','Remedies','الأدوية'],['gear','Equipment','العتاد']])tabs.append(shopButton(tr(en,ar),m.kind===kind,()=>{m.kind=kind;renderMarket()}));
+ if(!inn)for(const [key,en,ar] of [['buy','Buy','شراء'],['sell','Sell','بيع']])tabs.append(shopButton(tr(en,ar),m.tab===key,()=>{m.tab=key;renderMarket()}));
+ const party=$('market-party');party.replaceChildren();
+ if(gear)state.party.forEach((hero,i)=>{const b=shopButton(speakerLabel(hero.name),i===m.hero,()=>{m.hero=i;renderMarket()});const face=document.createElement('img');face.className='merchant-face';face.alt='';face.src='assets/portraits/'+hero.name.toLowerCase()+'-stats.png';b.prepend(face);party.append(b)});
+ const list=$('market-list'),oldFocus=document.activeElement?.dataset?.tradeItem,oldScroll=list.scrollTop;list.replaceChildren();
+ const rows=selling?saleStock():marketRows();
+ if(!rows.length){const empty=document.createElement('p');empty.textContent=tr('Your bag has nothing to sell here.','لا توجد في حقيبتك بضائع يمكن بيعها هنا.');list.append(empty)}
+ for(const row of rows){
+  const equipped=gear&&h.equipment[row.slot]===row.id,refit=gear&&!selling&&row.owned;
+  const cost=selling?Math.floor(row.price/2):refit?0:row.price;
+  const card=document.createElement('article');card.className='merchant-item';
+  const pic=document.createElement('img');pic.alt='';pic.src='assets/items/'+(row.type||row.slot||row.id)+'.png';
+  const body=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('small');
+  title.textContent=tr(row.en,row.ar);detail.textContent=row.detail;
+  body.append(title,detail);
+  if(!gear&&!inn){const qty=document.createElement('small');qty.textContent=tr('In bag · ','في الحقيبة · ')+remedyCount(row.id);body.append(qty)}
+  const action=document.createElement('button');action.type='button';action.dataset.tradeItem=row.id;
+  const replacement=selling&&equipped?saleReplacement(h,row):null;
+  const lastWeapon=selling&&equipped&&row.slot==='weapon'&&!replacement;
+  if(selling&&equipped&&!lastWeapon){
+   const note=document.createElement('small');note.textContent=tr('After sale · ','بعد البيع · ')+(replacement?tr(GEAR[replacement].en,GEAR[replacement].ar):tr('Slot empty','خانة فارغة'));body.append(note);
+  }
+  action.disabled=lastWeapon||(!selling&&(equipped||state.gold<cost));
+  action.textContent=lastWeapon?tr('Only weapon','السلاح الوحيد'):equipped&&!selling?tr('Equipped','مجهّز'):refit?tr('Equip free','تجهيز مجاني'):
+   (selling&&equipped?tr('Remove & sell','خلع وبيع'):selling?tr('Sell','بيع'):inn?tr('Rest','استرح'):tr('Buy','شراء'))+' · '+cost+' '+tr('gold','ذهب');
+  action.setAttribute('aria-label',action.textContent+' · '+title.textContent);
+  action.onclick=()=>selling?sellMarketItem(row.id):buyMarketItem(row.id);
+  card.append(pic,body,action);list.append(card);
+ }
+ list.scrollTop=oldScroll;if(oldFocus)Array.from(list.querySelectorAll('button')).find(b=>b.dataset.tradeItem===oldFocus&&!b.disabled)?.focus({preventScroll:true});
+}
+
+async function playInnRest(onRest){
+ const token=state.session;
+ state.mode='cutscene';state.keys={};resetJoystick();
+ $('market-screen').classList.add('hidden');
+ state.innRestSession=token;void startMusic(scoreDirector.requested||'village');
+ ui.fade.classList.add('inn-rest','on');
+ await sleep(560);
+ if(token!==state.session)return false;
+ healParty();onRest?.();
+ await sleep(1800);
+ if(token!==state.session)return false;
+ ui.fade.classList.remove('on');
+ await sleep(700);
+ if(token!==state.session)return false;
+ ui.fade.classList.remove('inn-rest');
+ state.innRestSession=null;void reconcileScore();
+ return true;
+}
+async function stayAtInn(cost){
+ state.gold-=cost;
+ const evening=cost===10&&state.gatePlanKnown&&!state.gateOpen;
+ const finished=await playInnRest(()=>{if(evening)state.storyTime='evening'});
+ if(!finished)return;
+ resumeChapterMap();
+ if(evening)saveNotice('Evening has fallen','حلّ المساء');
+ else saveNotice('Health and mana restored','استعاد الفريق صحته وماناه');
 }
 function buyMarketItem(id){
- if(state.mode!=='market')return;ensureEquipment();const m=state.market,h=state.party[m.hero],row=marketRows().find(row=>row.id===id);if(!row)return;const cost=row.owned?0:row.price;if(!Number.isFinite(cost)||state.gold<cost)return;
- if(m.kind==='gear'){const g=GEAR[id];if(!g||g.price===0||(g.type&&g.type!==weaponTypes[h.name])||h.equipment[g.slot]===id)return;h.equipment[g.slot]=id;if(!h.gearBag.includes(id))h.gearBag.push(id);const stats=heroStats(h);h.hp=Math.min(h.hp,stats.hp);h.ap=Math.min(h.ap,stats.ap)}else if(m.kind==='supplies'){setRemedyCount(id,remedyCount(id)+1)}else if(m.kind==='inn'&&id==='sleep'){healParty()}else return;
- state.gold-=cost;battleSfx('shield');renderMarket(id==='sleep'?tr('The whole party is fully rested.','استراح الفريق واستعاد كامل صحته وماناه.'):row.owned?tr('Owned equipment refitted. No gold spent.','أُعيد تجهيز قطعة مملوكة دون إنفاق ذهب.'):tr('Purchased and ready.','تم الشراء والتجهيز.'))
+ if(state.mode!=='market'||state.market.tab==='sell')return;ensureEquipment();const m=state.market,h=state.party[m.hero],row=marketRows().find(row=>row.id===id);if(!row)return;const cost=row.owned?0:row.price;if(!Number.isFinite(cost)||state.gold<cost)return;
+ if(m.kind==='inn'&&id==='sleep'){void stayAtInn(cost);return}
+ if(m.kind==='gear'){const g=GEAR[id];if(!g||g.price===0||(g.type&&g.type!==weaponTypes[h.name])||h.equipment[g.slot]===id)return;h.equipment[g.slot]=id;if(!h.gearBag.includes(id))h.gearBag.push(id);const stats=heroStats(h);h.hp=Math.min(h.hp,stats.hp);h.ap=Math.min(h.ap,stats.ap)}else if(m.kind==='supplies'){setRemedyCount(id,remedyCount(id)+1)}else return;
+ state.gold-=cost;tradeChime(false);renderMarket(row.owned?tr('Owned equipment refitted. No gold spent.','أُعيد تجهيز قطعة مملوكة دون إنفاق ذهب.'):tr('Purchased and ready.','تم الشراء والتجهيز.'))
 }
-function closeMarket(){$('market-screen').classList.add('hidden');if(state.mode==='market')resumeChapterMap()}
+function closeMarket(){$('market-screen').classList.add('hidden');if(state.mode==='market')returnToJourney()}
 showStats=function(){chapterPrevious.showStats();if(state.mode!=='stats')return;const sheets=$('stats-content').querySelectorAll?$('stats-content').querySelectorAll('.stats-sheet'):document.querySelectorAll('.stats-sheet');sheets.forEach((sheet,i)=>{const h=state.party[i];if(!h)return;const box=document.createElement('div');box.className='equipment-lines';box.textContent=Object.entries(SLOT_LABELS).map(([slot,[en,ar]])=>tr(en,ar)+': '+(GEAR[h.equipment?.[slot]]?tr(GEAR[h.equipment[slot]].en,GEAR[h.equipment[slot]].ar):tr('None','لا يوجد'))).join(' · ');sheet.appendChild(box)});const extra=document.createElement('p');extra.className='stats-tip';extra.textContent=Object.entries(REMEDIES).map(([id,item])=>tr(item.en,item.ar)+': '+remedyCount(id)).join(' · ')+' · '+tr('All equipment bonuses are added to base stats before level growth.','تضاف زيادات جميع التجهيزات إلى الأساس قبل نمو المستوى.');$('stats-content').appendChild(extra)};
 const beforeItemList=battleCommandList;
 battleCommandList=function(){if(state.battleMenu==='item')return [...Object.entries(REMEDIES).filter(([id])=>['herb','blue'].includes(id)||remedyCount(id)>0).map(([id,item])=>[item.en.toUpperCase()+' ×'+remedyCount(id),id,item.ar+' ×'+remedyCount(id)]),['← BACK','back','رجوع →']];return beforeItemList()};
 chooseCommand=function(action){const b=state.battle;if(REMEDIES[action]&&b?.kind&&!b.busy&&state.mode==='battle'){useRemedyInBattle(action);return}chapterPrevious.chooseCommand(action)};
 function chiefFollowupLines(){
- if(state.venomJoined)return[D('Mayor Rowan','Venom is free, and he travels under your protection. I hope he uses this chance well.','أصبح فينوم حرًا، ويسافر تحت حمايتكم. آمل أن يحسن استغلال هذه الفرصة.'),D('Mayor Rowan','His courier paths lead toward Valdorn. Raymond speaks to its crowds from the citadel; the Brotherhood of Dawn hides its prisoners from those same crowds. Prepare before following that road.','تقود طرق رسله نحو فالدور. يخطب ريموند في جماهيرها من القلعة، بينما تخفي أخوية الفجر سجناءها عن تلك الجماهير نفسها. جهزوا أنفسكم قبل اتباع ذلك الطريق.')];
+ if(state.venomJoined)return[D('Mayor Rowan','Venom is free, and he travels under your protection. I hope he uses this chance well.','أصبح فينوم حرًا، ويسافر تحت حمايتكم. آمل أن يحسن استغلال هذه الفرصة.'),D('Mayor Rowan','His courier paths lead toward Valdorn. Raymond speaks to its crowds from the citadel; the Brotherhood of Dawn hides its prisoners from those same crowds. Prepare before following that road.','تقود طرق رسله نحو فالدور. يخطب رايموند في جماهيرها من القلعة، بينما تخفي أخوية الفجر سجناءها عن تلك الجماهير نفسها. جهزوا أنفسكم قبل اتباع ذلك الطريق.')];
  if(state.venomState==='rejected')return[D('Mayor Rowan','Venom remains in the holding cell. You made your decision; I will keep him there.','سيبقى فينوم في غرفة الاحتجاز. لقد اتخذتما قراركما، وسأبقيه هناك.'),D('Mayor Rowan','The registry is safe. We still need to discover why the Brotherhood of Dawn is taking families toward Valdorn.','السجل آمن. ما زلنا بحاجة إلى معرفة سبب نقل أخوية الفجر للعائلات نحو فالدور.')];
  if(state.venomState==='jailed')return[D('Mayor Rowan','The thief is in the southeast cell. Hear what he has to say before deciding whether to speak on his behalf.','اللص في غرفة الاحتجاز الجنوبية الشرقية. اسمعا ما لديه قبل أن تقررا إن كنتما ستتوسطان له.')];
  return[D('Mayor Rowan','The guest beds are in the northwest room. Rest there when you have finished exploring Asterford.','أسرّة الضيوف في الغرفة الشمالية الغربية. استريحا هناك عندما تنتهيان من استكشاف أسترفورد.')]
@@ -253,7 +359,7 @@ function renderDevLevels(){
  const area=$('dev-levels');area.replaceChildren();$('dev-level-message').textContent='';
  const heading=document.createElement('h3');heading.textContent=tr('Set the current party level','تغيير مستوى الفريق الحالي');area.appendChild(heading);
  const row=document.createElement('div');row.className='dev-level-row';const targetLabel=document.createElement('label');targetLabel.textContent=tr('Companion','الرفيق');
- const target=document.createElement('select');target.id='dev-level-target';for(const [value,label] of [['all',tr('Whole party','الفريق كله')],...state.party.map(h=>[h.name,h.name])]){const option=document.createElement('option');option.value=value;option.textContent=label;target.appendChild(option)}target.value='all';targetLabel.appendChild(target);row.appendChild(targetLabel);
+ const target=document.createElement('select');target.id='dev-level-target';for(const [value,label] of [['all',tr('Whole party','الفريق كله')],...state.party.map(h=>[h.name,speakerLabel(h.name)])]){const option=document.createElement('option');option.value=value;option.textContent=label;target.appendChild(option)}target.value='all';targetLabel.appendChild(target);row.appendChild(targetLabel);
  const levelLabel=document.createElement('label');levelLabel.textContent=tr('Level','المستوى');const picker=document.createElement('select');picker.id='dev-level-value';for(let i=1;i<=99;i++){const option=document.createElement('option');option.value=String(i);option.textContent=String(i);picker.appendChild(option)}picker.value=String(state.party.find(h=>h.name==='Astro')?.level||state.party[0].level);levelLabel.appendChild(picker);row.appendChild(levelLabel);
  target.addEventListener('change',()=>{picker.value=String((state.party.find(h=>h.name===target.value)||state.party.find(h=>h.name==='Astro')||state.party[0]).level)});
  const apply=document.createElement('button');apply.type='button';apply.className='small-button';apply.textContent=tr('Apply level','طبّق المستوى');apply.addEventListener('click',()=>setDevelopmentLevel(Number(picker.value),target.value));row.appendChild(apply);area.appendChild(row);
@@ -266,14 +372,13 @@ function closeDev(){$('dev-screen').classList.add('hidden');if(state.mode==='dev
 function developmentJump(stage){developmentCheckpoint=null;abortCurrentFlow();Object.assign(state,chapterFlags());state.journey=true;state.burning=false;state.scoutMet=true;state.herbs=5;state.blueHerbs=2;state.inventory={vital:0,azure:0,dawnleaf:0};state.gold=80;state.fastText=true;state.party=developmentHeroes(['Shadow','Astro']);ensureEquipment();healParty();state.level=state.party.find(h=>h.name==='Astro').level;state.devTesting=true;
  if(stage==='forest'){state.postCheckpoint=false;state.scene='forest';state.entities=partySprites(110,243);state.entities.push(entity('Scout',133,212,'#879568',{talk:true}));chapterPrevious.returnToJourney()}
  if(stage==='world'||stage==='townRaid'||stage==='rally'){state.postCheckpoint=true;state.bossCleared=true;setupWorld();if(stage==='townRaid')state.rallySeen=true;saveCheckpoint('after_checkpoint');if(stage==='townRaid')enterAsterford();else if(stage==='rally')showRaymondRally();else resumeChapterMap()}
- if(['town','night','prison'].includes(stage)){state.postCheckpoint=true;state.bossCleared=true;state.townRaidCleared=true;state.mayorHome=true;state.rallySeen=true;setupTown();saveCheckpoint('after_town_raid');if(stage==='town')resumeChapterMap();if(stage==='night'){state.chiefMet=true;setupInterior('manor');resumeChapterMap();beginNight()}if(stage==='prison'){state.chiefMet=true;state.nightDone=true;state.venomState='jailed';setupManorRoom('cell',417,175);resumeChapterMap()}}
+ if(['town','night','prison'].includes(stage)){state.postCheckpoint=true;state.bossCleared=true;state.townRaidCleared=true;state.mayorHome=true;state.rallySeen=true;setupTown();saveCheckpoint('after_town_raid');if(stage==='town')resumeChapterMap();if(stage==='night'){state.chiefMet=true;setupInterior('manor');resumeChapterMap();beginNight()}if(stage==='prison'){state.chiefMet=true;state.nightDone=true;state.venomState='jailed';setupManorRoom('cell',408,235);resumeChapterMap()}}
  startMusic('village');
 }
 applyLanguage=function(){chapterPrevious.applyLanguage();$('dev-button').textContent=tr('DEV','تطوير');$('skip-text').textContent=tr('Skip text','تجاوز النص');$('dialogue-skip').textContent=tr('Skip text','تجاوز النص');if(state.mode==='map'&&chapterScene())chapterObjective();updateContinueButton();if(state.mode==='market')renderMarket()};
 const normalShowLine=showDialogueLine;
 showDialogueLine=function(){normalShowLine();if(state.fastText)finishTyping()};
 // Invalidated cutscenes remain suspended, so a DEV jump cannot resume an old raid.
-moveTo=function(e,x,y,speed=1.5){const token=state.session;return new Promise(resolve=>{function step(){if(token!==state.session)return;const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy);if(d<speed){e.x=x;e.y=y;resolve();return}e.x+=dx/d*speed;e.y+=dy/d*speed;e.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');requestAnimationFrame(step)}step()})};
 fadeScene=async function(scene){const token=state.session;ui.fade.classList.add('on');await sleep(360);if(token!==state.session)return new Promise(()=>{});state.scene=scene;if(['throne','raymond_private','finale_council'].includes(scene))startMusic('sanctum');else if(state.finalePlaying&&scene==='finale_voyage')startMusic('voyage');ui.fade.classList.remove('on');await sleep(320);if(token!==state.session)return new Promise(()=>{})};
 $('continue-game').addEventListener('click',async()=>{await unlockAudio();restoreCheckpoint()});$('market-close').addEventListener('click',closeMarket);$('dev-button').addEventListener('click',()=>openDev());$('dev-close').addEventListener('click',closeDev);$('skip-text').addEventListener('click',()=>{if(state.mode==='dev'&&state.devReturn==='dialogue'){closeDev();skipCurrentDialogue()}});$('dialogue-skip').addEventListener('click',e=>{e.stopPropagation();skipCurrentDialogue()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.mode==='market'){e.preventDefault();closeMarket()}else if(e.key==='Escape'&&state.mode==='dev'){e.preventDefault();closeDev()}});
