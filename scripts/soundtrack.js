@@ -1,26 +1,37 @@
 'use strict';
 // Each local script registers one encoded score. This also works when index.html
 // is opened directly from disk, where fetching audio with XHR can be blocked.
-const themeJobs=new Map(),themeCache=new Map();
+const themeJobs=new Map(),themePayloads=new Map(),themeCache=new Map();
 function registerGameTheme(key,encoded,loopSeconds){
- const job=themeJobs.get(key);if(!job)return;
- const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
- audio.ctx.decodeAudioData(bytes.buffer).then(buffer=>{
-  const entry={buffer,loopSeconds};themeCache.set(key,entry);
-  if(themeCache.size>3)themeCache.delete(themeCache.keys().next().value);
-  job.resolve(entry);
- },job.reject);
+ const entry={encoded,loopSeconds};
+ themePayloads.set(key,entry);
+ themeJobs.get(key)?.resolve(entry);
 }
-function loadGameTheme(key){
- if(themeCache.has(key))return Promise.resolve(themeCache.get(key));
+function preloadGameTheme(key){
+ if(themePayloads.has(key))return Promise.resolve(themePayloads.get(key));
  if(themeJobs.has(key))return themeJobs.get(key).promise;
  const script=document.createElement('script'),job={};
  job.promise=new Promise((resolve,reject)=>Object.assign(job,{resolve,reject}));
- themeJobs.set(key,job);script.src='assets/audio/themes/'+key+'.js?v=finale-voyage-2';
+ themeJobs.set(key,job);
+ script.src='assets/audio/themes/'+key+'.js?v=finale-voyage-2';
  script.onerror=()=>job.reject(new Error('Cannot load '+key));
+ script.onload=()=>{if(!themePayloads.has(key))job.reject(new Error('Missing score '+key))};
  document.head.append(script);
- job.promise.then(clean,clean);function clean(){themeJobs.delete(key);script.remove()}
+ job.promise.then(clean,clean);
+ function clean(){themeJobs.delete(key);script.remove()}
  return job.promise;
+}
+function loadGameTheme(key){
+ if(!themeCache.has(key)){
+  const job=preloadGameTheme(key).then(async ({encoded,loopSeconds})=>{
+   const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+   return {buffer:await audio.ctx.decodeAudioData(bytes.buffer),loopSeconds};
+  });
+  themeCache.set(key,job);
+  if(themeCache.size>3)themeCache.delete(themeCache.keys().next().value);
+  job.catch(()=>{if(themeCache.get(key)===job)themeCache.delete(key)});
+ }
+ return themeCache.get(key);
 }
 const scoreDirector={
  requested:null,key:null,serial:0,active:null,nextCheck:0,

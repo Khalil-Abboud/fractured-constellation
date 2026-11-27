@@ -17,9 +17,22 @@
   <link rel="stylesheet" href="styles/cinematic-battle.css?v=analysis-and-healing-1">
   <link rel="stylesheet" href="styles/battle-layout.css?v=skill-motifs-1">
 <link rel="stylesheet" href="styles/market.css">
+  <style>
+    #startup-loading:not([hidden]){position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:#090f1d;color:#fff0c5;padding:1.25rem;font:500 1rem/1.45 system-ui,sans-serif;text-align:center}
+    #startup-loading div{width:min(100%,28rem)}
+    #startup-loading progress{width:100%;height:1rem;accent-color:#e4bd61}
+    #startup-loading button{margin-top:1rem}
+  </style>
 </head>
 <body>
-<main id="game">
+<section id="startup-loading">
+  <div>
+    <p id="startup-status" role="status">Loading game assets...</p>
+    <progress id="startup-progress" value="0" max="100" aria-label="Game loading progress"></progress>
+    <button id="startup-retry" class="small-button" type="button" hidden>Retry</button>
+  </div>
+</section>
+<main id="game" inert>
   <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Game volume</h2><button id="music-settings-close" type="button" aria-label="Close sound settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><div class="music-volume-row"><label id="score-label" for="score-slider">Music</label><output id="score-value" for="score-slider">100%</output></div><input id="score-slider" type="range" min="0" max="100" step="1" value="100"><div class="music-volume-row"><label id="effects-label" for="effects-slider">Sound effects</label><output id="effects-value" for="effects-slider">100%</output></div><input id="effects-slider" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute sound</button></section>
 
   <header id="topbar"><button id="dev-button" class="dev-corner" type="button" aria-label="Development tools">⚙</button><div id="objective">PROTOTYPE · CHAPTER I</div><div class="top-actions"><button id="stats-button" class="small-button" type="button">Stats</button><button id="music-toggle" class="small-button" type="button" aria-controls="music-panel" aria-expanded="false">Music: On</button><button id="restart" class="small-button" type="button">Restart</button><button id="fullscreen" class="small-button" type="button">Fullscreen</button></div></header>
@@ -64,7 +77,8 @@
 <script src="scripts/audio-settings.js?v=mixer-1"></script>
 <script src="scripts/interface-input.js?v=enemy-knowledge-2"></script>
 <script src="scripts/cinematic-battle.js?v=analysis-and-healing-1"></script>
-<script src="scripts/soundtrack.js?v=finale-voyage-2"></script>
+<script src="scripts/soundtrack.js?v=startup-assets-1"></script>
+<script src="scripts/startup-assets.js?v=1"></script>
 </body>
 </html>
 
