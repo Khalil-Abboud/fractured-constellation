@@ -6,7 +6,7 @@ function loadHeroBattleArt(name){
  return Object.fromEntries((name==='atrox'?['idle','ready','action']:['idle','ready','action','fallen']).map(pose=>[pose,loadBattleArt(`assets/characters/${name}-${pose}.png`)]));
 }
 const heroBattleArt={Shadow:loadHeroBattleArt('shadow'),Astro:loadHeroBattleArt('astro'),Michou:loadHeroBattleArt('michou'),Venom:loadHeroBattleArt('venom'),Atrox:loadHeroBattleArt('atrox')};
-const heroBattleHeights={Shadow:{idle:66,ready:61,action:58},Astro:{idle:56,ready:54,action:50},Michou:{idle:55,ready:55,action:55},Venom:{idle:56,ready:54,action:50},Atrox:{idle:86,ready:79,action:72}};
+const heroBattleHeights={Shadow:{idle:66,ready:61,action:58},Astro:{idle:64,ready:61,action:57},Michou:{idle:55,ready:55,action:55},Venom:{idle:56,ready:54,action:50},Atrox:{idle:86,ready:79,action:72}};
 
 function battleHeroPose(b,actor,down){
  if(down)return 'idle';
