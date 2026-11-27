@@ -6,7 +6,7 @@ const SKILLS={
  umbralSeal:{hero:'Shadow',level:4,cost:6,kind:'seal',en:'Umbral Seal',ar:'ختم الظل',desc:['Binds one enemy’s special skills for 2 enemy phases; bosses resist after 1. Basic attacks remain possible.','يقيد مهارات عدو واحد الخاصة لمرحلتين للعدو؛ يقاوم الزعماء بعد مرحلة واحدة. يبقى الهجوم العادي ممكنًا.']},
  shadeSiphon:{hero:'Shadow',level:6,cost:8,kind:'physical',power:1.15,drain:.35,en:'Siphoning Shade',ar:'ظل مستنزف',desc:['Physical attack ×1.15; Shadow heals for 35% of the health actually removed.','الهجوم الجسدي ×1.15؛ يستعيد شادو صحة تعادل 35% من الصحة التي سلبها فعلًا.']},
  eclipseBlade:{hero:'Shadow',level:10,cost:16,kind:'physical',power:1.80,pierce:.25,en:'Eclipse Blade',ar:'نصل الكسوف',desc:['A concentrated shadow blade. Physical attack ×1.80, ignoring 25% of target defense.','نصل ظل مكثف. الهجوم الجسدي ×1.80 ويتجاهل 25% من دفاع الهدف.']},
- analysis:{hero:'Astro',level:1,cost:6,kind:'analyze',en:'Enemy Analysis',ar:'تحليل العدو',desc:['Spends 6 mana to reveal enemy health. Success chance: 90% against ordinary enemies, 75% against boss minions, 40% against bosses. Deals no damage.','يصرف 6 مانا لكشف صحة العدو. فرصة النجاح 90٪ ضد الأعداء العاديين، و75٪ ضد أتباع الزعماء، و40٪ ضد الزعماء. لا يسبب ضررًا.']},
+ analysis:{hero:'Astro',level:1,cost:6,kind:'analyze',en:'Enemy Analysis',ar:'تحليل العدو',desc:['Spends 6 mana to reveal enemy health. Success chance: 90% against ordinary enemies, 75% against boss minions, 45% against bosses. Deals no damage.','يصرف 6 مانا لكشف صحة العدو. فرصة النجاح 90٪ ضد الأعداء العاديين، و75٪ ضد أتباع الزعماء، و45٪ ضد الزعماء. لا يسبب ضررًا.']},
  starbolt:{hero:'Astro',level:1,cost:5,kind:'magic',power:1.10,en:'Star Bolt',ar:'سهم نجمي',desc:['A focused star projectile. Magic ×1.10 against one enemy.','مقذوف نجمي مركز. السحر ×1.10 ضد عدو واحد.']},
  shield:{hero:'Astro',level:3,cost:6,kind:'shield',en:'Orbit Shield',ar:'درع مداري',desc:['Reduces incoming party damage by 25% for the current and next complete rounds, regardless of hit count.','يخفف ضرر الفريق الوارد 25% للجولة الحالية والجولة التالية كاملتين، مهما كان عدد الضربات.']},
  flare:{hero:'Astro',level:5,cost:12,kind:'magic',power:1.10*1.25,all:true,en:'Astral Flare',ar:'وهج نجمي',desc:['Hits every enemy at 1.25× Star Bolt power.','يصيب جميع الأعداء بقوة تعادل 1.25 ضعف السهم النجمي.']},
@@ -28,7 +28,7 @@ battleCommandList=function(){const list=skillPrevious.battleCommandList();if(sta
 function skillDescription(s){return tr(...s.desc)}
 function skillBoss(e,b=state.battle){return b.kind==='boss'&&b.enemies[0]===e}
 function analysisChance(b,enemy){
- if(!b.kind||skillBoss(enemy,b))return .40;
+ if(!b.kind||skillBoss(enemy,b))return .45;
  return b.kind==='boss'?.75:.90;
 }
 function expireEnemyEffects(b){b.enemies.forEach(e=>{if(e.sabotaged&&b.round>e.sabotaged.expiresRound){e.defense=e.sabotaged.original;e.sabotaged=null}})}
@@ -36,10 +36,10 @@ const skillBeginRound=beginPartyRound;
 beginPartyRound=function(){expireEnemyEffects(state.battle);skillBeginRound()};
 battleGold=function(enemies){return skillPrevious.battleGold(enemies)+enemies.reduce((sum,e)=>sum+(e.stolenGold||0),0)};
 offensivePower=function(h,action){const s=SKILLS[action],stats=heroStats(h);return s?.power?stats[s.kind==='magic'?'magic':'attack']*s.power:stats.attack};
-function scheduleSkillImpact(hits,duration){
+function scheduleSkillImpact(hits,duration,skill){
  const battle=state.battle;
  battleDelay(()=>{
-  triggerEnemyDamageFeedback(hits,{actor:-1});
+  triggerEnemyDamageFeedback(hits,{actor:-1,skill});
   if(hits.some(hit=>hit.critical))criticalImpact();
   battle.enemyShake=true;battleDelay(()=>{battle.enemyShake=false},390);
  },duration*IMPACT_PHASE);
@@ -100,7 +100,7 @@ chooseCommand=function(action){
   const stats=heroStats(h),results=targets.map(t=>{const power=(s.kind==='magic'?stats.magic:stats.attack)*s.power,hit=rollDamage(power,t.defense*(1-(s.pierce||0))),removed=Math.min(t.hp,hit.amount);t.hp=Math.max(0,t.hp-hit.amount);if(s.poison&&t.hp>0)t.poison={turns:s.poison,damage:Math.max(1,Math.floor(stats.attack*.18))};if(s.weaken&&t.hp>0){const original=t.gravity?.original??t.attack;t.gravity={original,turns:2};t.attack=Math.floor(original*(skillBoss(t)?.85:.75))}return{t,hit,removed}});
   if(s.drain){const before=h.hp;h.hp=Math.min(stats.hp,h.hp+Math.floor(results.reduce((n,r)=>n+r.removed,0)*s.drain));allies=[b.actor];showBattleHealing(b.actor,h.hp-before);detail=tr(' · Shadow restores '+(h.hp-before)+' HP.',' · يستعيد شادو '+(h.hp-before)+' صحة.')}
   detail=results.map(r=>tr(r.t.name,r.t.ar)+': '+r.hit.amount+(r.hit.critical?tr(' CRIT',' حرجة'):'')+(s.poison&&r.t.hp>0?tr(' + poison',' + سم'):'')+(s.weaken&&r.t.hp>0?tr(' + ATK down',' + خفض الهجوم'):'')).join(' · ')+detail;
-  scheduleSkillImpact(results.map(r=>({index:b.enemies.indexOf(r.t),amount:r.hit.amount,critical:r.hit.critical})),s.duration||860);
+  scheduleSkillImpact(results.map(r=>({index:b.enemies.indexOf(r.t),amount:r.hit.amount,critical:r.hit.critical})),s.duration||860,action);
  }
  skillFx(action,['heal','shield'].includes(s.kind)?[]:targets.map(t=>b.enemies.indexOf(t)),allies);if(s.kind==='steal')b.skillFx.failed=!e.stolen;if(s.kind==='analyze')b.skillFx.failed=!b.healthKnowledge?.[state.target];setBattleMessage(tr(h.name,HERO_AR[h.name])+' · '+tr(s.en,s.ar)+' — '+detail);renderCommands();updateStats();battleDelay(afterHeroAction,(s.duration||860)+60)
 };
@@ -109,7 +109,7 @@ partyEnemyPhase=function(index){
  const b=state.battle;if(!b||state.mode!=='battle')return;if(index===0){b.busy=true;b.enemyQueue=b.enemies.filter(e=>e.hp>0).sort((a,c)=>c.speed-a.speed)}const queue=b.enemyQueue||[];
  if(b.enemies.every(e=>e.hp<=0)){winEncounter();return}if(state.party.every(h=>h.hp<=0)){loseEncounter();return}if(index>=queue.length){b.round++;beginPartyRound();return}
  const e=queue[index];if(e.hp<=0){partyEnemyPhase(index+1);return}
- if(e.poison?.turns>0){const d=Math.min(e.hp,e.poison.damage),enemyIndex=b.enemies.indexOf(e);e.hp-=d;e.poison.turns--;setBattleMessage(tr(e.name+' suffers '+d+' poison damage.',e.ar+' يتلقى '+d+' ضرر سم.'));skillFx('poisonTick',[enemyIndex]);battleSfx('magic');triggerEnemyDamageFeedback([{index:enemyIndex,amount:d,critical:false}],{actor:-1,duration:360});renderCommands();updateStats();battleDelay(()=>enemyAct(e,index),550)}else enemyAct(e,index)
+ if(e.poison?.turns>0){const d=Math.min(e.hp,e.poison.damage),enemyIndex=b.enemies.indexOf(e);e.hp-=d;e.poison.turns--;setBattleMessage(tr(e.name+' suffers '+d+' poison damage.',e.ar+' يتلقى '+d+' ضرر سم.'));skillFx('poisonTick',[enemyIndex]);battleSfx('magic');triggerEnemyDamageFeedback([{index:enemyIndex,amount:d,critical:false}],{actor:-1,duration:360,skill:'poisonTick'});renderCommands();updateStats();battleDelay(()=>enemyAct(e,index),550)}else enemyAct(e,index)
 };
 function enemyAct(e,index){
  if(state.mode==='battle'&&e.hp>0&&state.party.some(h=>h.hp>0)){

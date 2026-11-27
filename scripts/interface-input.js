@@ -2,6 +2,15 @@
 // Enemy knowledge, responsive UI, statistics, joystick, buttons, and startup.
 // Encounter knowledge is frozen for a whole battle, then used on later encounters.
 const ENEMY_KNOWLEDGE_KEY='fractured_enemy_knowledge_v2';
+const restoreNamedCheckpoint=restoreCheckpoint;
+restoreCheckpoint=function(){
+ const saved=state.devTesting?developmentCheckpoint:(checkpoint||readStoredCheckpoint());
+ if(validCheckpoint(saved)){
+  const name=saved.playerName;
+  state.playerName=typeof name==='string'&&(!playerNameIssue(name,'ar')||!playerNameIssue(name,'en'))?name:'';
+ }
+ return restoreNamedCheckpoint();
+};
 let knownEnemies=new Set(),testKnownEnemies=new Set();
 try{const saved=JSON.parse(localStorage.getItem(ENEMY_KNOWLEDGE_KEY)||'[]');if(Array.isArray(saved))knownEnemies=new Set(saved.filter(x=>typeof x==='string'))}catch(_){}
 function enemyKnowledgeKey(enemy){if(enemy.name==='The Beast')return 'The Abomination';return enemy.name.replace(/\s+(?:[A-D]|\d+)$/,'').trim()}
@@ -281,5 +290,5 @@ ui.prompt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){activa
 const pixelDialogueLanguagePrevious=applyLanguage;
 applyLanguage=function(){pixelDialogueLanguagePrevious();ui.continue.textContent=tr('CLICK / Z / ENTER','انقر أو اضغط Z / Enter')};
 
-$('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',startGame);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
+$('action-button').addEventListener('pointerdown',beginActionPress);$('action-button').addEventListener('click',e=>{if(consumeActionClick(e))return;if(e.detail===0)pressA()});$('dialogue-box').addEventListener('click',e=>{if(!consumeActionClick(e))advanceDialogue()});$('new-game').addEventListener('click',promptPlayerName);$('again').addEventListener('click',reset);$('restart').addEventListener('click',reset);$('music-toggle').addEventListener('click',openMusicSettings);document.querySelectorAll('.language-button').forEach(b=>b.addEventListener('click',()=>{if(state.mode!=='title')return;state.lang=b.dataset.lang;applyLanguage();promptPlayerName()}));$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('game').requestFullscreen();else await document.exitFullscreen()}catch(_){}});document.addEventListener('pointerdown',()=>{if(audio.ctx&&audio.ctx.state!=='running')audio.ctx.resume().catch(()=>{})},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&audio.ctx&&audio.on)audio.ctx.resume().catch(()=>{})});reset();draw();update();
 

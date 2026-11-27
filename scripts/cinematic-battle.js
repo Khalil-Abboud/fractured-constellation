@@ -20,9 +20,9 @@ function animatedHealth(b,key,current){
 function triggerHeroDamageFeedback(index,amount,critical=false){
  const b=state.battle;if(!b||amount<=0)return;
  const now=combatClock();b.heroHits??={};b.heroHits[index]={start:now};
- b.damageNumbers??=[];b.damageNumbers.push({side:'hero',index,amount,critical,start:now,duration:1000});
+ b.damageNumbers??=[];b.damageNumbers.push({side:'hero',contact:'enemy',index,amount,critical,start:now,duration:1000});
  const hp=b.kind?state.party[index].hp:b.hp;
- startHealthTransition(b,'hero-'+index,hp,amount);battleSfx('hit');
+ startHealthTransition(b,'hero-'+index,hp,amount);soundBattleContact('enemy',critical);
 }
 const cinematicEnemyTurnPrevious=enemyTurn;
 enemyTurn=function(){
@@ -90,11 +90,11 @@ function showBattleHealing(index,amount){
  if(amount<=0)return;
  const battle=state.battle;
  battle.damageNumbers??=[];
- battle.damageNumbers.push({side:'hero',index,amount,healing:true,start:performance.now(),duration:1000});
+ battle.damageNumbers.push({side:'hero',index,amount,healing:true,start:combatClock(),duration:1000});
 }
 drawDamageNumbers=function(b){
  const now=state.time,positions=b.kind?battleEnemyPositions(b):[[160,142]];b.damageNumbers=(b.damageNumbers||[]).filter(item=>now-item.start<item.duration);cinematicDamage.replaceChildren();
- b.damageNumbers.forEach(item=>{const p=item.side==='hero'?(b.kind?heroBattlePoint(item.index):[385,196]):positions[item.index]||positions[0],t=Math.max(0,(now-item.start)/item.duration),label=document.createElement('div');label.className='damage-pop'+(item.healing?' healing':item.critical?' critical':'');label.style.left=p[0]/512*100+'%';label.style.top=(p[1]-35-t*22)/288*100+'%';label.style.opacity=Math.min(1,(1-t)*2);const scale=t<.15?.65+t*4:t<.3?1.25-(t-.15)*1.67:1;label.style.transform='translate(-50%,-80%) scale('+scale+')';if(item.critical){const caption=document.createElement('small');caption.textContent=tr('CRITICAL!','ضربة حرجة!');label.appendChild(caption)}const number=document.createElement('strong');number.textContent=item.healing?'+'+item.amount:item.amount;label.appendChild(number);cinematicDamage.appendChild(label)})
+ b.damageNumbers.forEach(item=>{paintBattleContact(b,item,now);const p=item.side==='hero'?(b.kind?heroBattlePoint(item.index):[385,196]):positions[item.index]||positions[0],t=Math.max(0,(now-item.start)/item.duration),label=document.createElement('div');label.className='damage-pop'+(item.healing?' healing':item.critical?' critical':'');label.style.left=p[0]/512*100+'%';label.style.top=(p[1]-35-t*22)/288*100+'%';label.style.opacity=Math.min(1,(1-t)*2);const scale=t<.15?.65+t*4:t<.3?1.25-(t-.15)*1.67:1;label.style.transform='translate(-50%,-80%) scale('+scale+')';if(item.critical){const caption=document.createElement('small');caption.textContent=tr('CRITICAL!','ضربة حرجة!');label.appendChild(caption)}const number=document.createElement('strong');number.textContent=item.healing?'+'+item.amount:item.amount;label.appendChild(number);cinematicDamage.appendChild(label)})
 };
 function cinematicTick(){
  const b=state.battle;

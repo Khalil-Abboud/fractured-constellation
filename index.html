@@ -22,6 +22,14 @@
     #startup-loading div{width:min(100%,28rem)}
     #startup-loading progress{width:100%;height:1rem;accent-color:#e4bd61}
     #startup-loading button{margin-top:1rem}
+      #player-name-dialog{box-sizing:border-box;width:min(25rem,92%);border:2px solid #dbb758;background:#0d1c32;color:#fff0d2;padding:1.4rem;font:1rem/1.5 system-ui,sans-serif}
+    #player-name-dialog::backdrop{background:#060b18cf}
+    #player-name-form{display:grid;gap:.65rem}
+    #player-name-label{font-weight:bold;font-size:1.2em}
+    #player-name-input{font:inherit;color:inherit;padding:.5em;background:#091326;border:1px solid #91a4bd;user-select:text}
+    #player-name-error{color:#ffb3a3;margin:0}
+    #player-name-error:empty{display:none}
+    #player-name-form div{display:flex;gap:.6rem;justify-content:flex-end}
   </style>
 </head>
 <body>
@@ -33,6 +41,16 @@
   </div>
 </section>
 <main id="game" inert>
+  <dialog id="player-name-dialog" aria-labelledby="player-name-label">
+    <form id="player-name-form">
+      <label id="player-name-label" for="player-name-input"></label>
+      <input id="player-name-input" type="text" autocomplete="off" aria-describedby="player-name-help player-name-error" required>
+      <small id="player-name-help"></small>
+      <p id="player-name-error" role="alert"></p>
+      <div><button id="player-name-cancel" type="button" class="small-button"></button>
+      <button id="player-name-confirm" type="submit" class="main-button"></button></div>
+    </form>
+  </dialog>
   <section id="music-panel" class="hidden" aria-labelledby="music-settings-title"><div class="music-settings-heading"><h2 id="music-settings-title">Game volume</h2><button id="music-settings-close" type="button" aria-label="Close sound settings">×</button></div><div class="music-volume-row"><label id="music-volume-label" for="music-volume">Volume</label><output id="music-volume-value" for="music-volume">100%</output></div><input id="music-volume" type="range" min="0" max="100" step="1" value="100"><div class="music-volume-row"><label id="score-label" for="score-slider">Music</label><output id="score-value" for="score-slider">100%</output></div><input id="score-slider" type="range" min="0" max="100" step="1" value="100"><div class="music-volume-row"><label id="effects-label" for="effects-slider">Sound effects</label><output id="effects-value" for="effects-slider">100%</output></div><input id="effects-slider" type="range" min="0" max="100" step="1" value="100"><button id="music-mute" type="button">Mute sound</button></section>
 
   <header id="topbar"><button id="dev-button" class="dev-corner" type="button" aria-label="Development tools">⚙</button><div id="objective">PROTOTYPE · CHAPTER I</div><div class="top-actions"><button id="stats-button" class="small-button" type="button">Stats</button><button id="music-toggle" class="small-button" type="button" aria-controls="music-panel" aria-expanded="false">Music: On</button><button id="restart" class="small-button" type="button">Restart</button><button id="fullscreen" class="small-button" type="button">Fullscreen</button></div></header>
@@ -65,18 +83,19 @@
 <script src="assets/audio/sanctum-02.js"></script>
 <script src="scripts/visual-art.js?v=checkpoint-commander-1"></script>
 <script src="scripts/interiors.js?v=manor-chest-1"></script>
-<script src="scripts/core.js?v=astro-battle-scale-1"></script>
-<script src="scripts/journey.js?v=analysis-and-healing-1"></script>
-<script src="scripts/asterford.js?v=analysis-and-healing-1"></script>
+<script src="scripts/player-name.js?v=shadow-allowed-1"></script>
+<script src="scripts/core.js?v=elaris-formation-1"></script>
+<script src="scripts/journey.js?v=steady-party-attacks-1"></script>
+<script src="scripts/asterford.js?v=player-name-1"></script>
 <script src="scripts/eastern-march.js?v=army-ranks-1"></script>
-<script src="scripts/skill-effects.js?v=room-and-battle-3"></script>
-<script src="scripts/battle.js?v=analysis-and-healing-1"></script>
+<script src="scripts/skill-effects.js?v=combat-contact-1"></script>
+<script src="scripts/battle.js?v=boss-analysis-45"></script>
 <script src="scripts/finale.js?v=continuous-score-1"></script>
 <script src="scripts/battle-controls.js?v=elaris-original-audio"></script>
 <script src="scripts/developer-tools.js?v=merchants-score-1"></script>
 <script src="scripts/audio-settings.js?v=mixer-1"></script>
-<script src="scripts/interface-input.js?v=enemy-knowledge-2"></script>
-<script src="scripts/cinematic-battle.js?v=analysis-and-healing-1"></script>
+<script src="scripts/interface-input.js?v=player-name-1"></script>
+<script src="scripts/cinematic-battle.js?v=combat-contact-1"></script>
 <script src="scripts/soundtrack.js?v=battle-restart-1"></script>
 <script src="scripts/startup-assets.js?v=1"></script>
 </body>

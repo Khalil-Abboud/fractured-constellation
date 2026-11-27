@@ -204,6 +204,56 @@ function paintTargetSkill(f,i,source,target,t,ink){
  }
  }
 }
+// Contact effects share the damage event's target and combat clock.
+const impactStyles={
+ blade:{color:'#ffdf92',pitch:360,end:105,noise:2300},
+ shadow:{color:'#ba89ff',pitch:190,end:48,noise:860},
+ star:{color:'#96eaff',pitch:920,end:410,noise:2600},
+ fang:{color:'#c8ee73',pitch:470,end:155,noise:3400},
+ arrow:{color:'#ffd28a',pitch:690,end:85,noise:1850},
+ enemy:{color:'#ffad89',pitch:165,end:55,noise:1400}
+};
+function impactStyle(hero,skill){
+ if(skill==='poisonTick'||skill==='toxicFang')return 'fang';
+ if(hero==='Shadow')return skill?'shadow':'blade';
+ return ({Astro:'star',Venom:'fang',Michou:'arrow'})[hero]||'blade';
+}
+function soundBattleContact(style,critical){
+ const ac=audio.ctx;
+ if(!audio.on||ac?.state!=='running')return;
+ const voice=impactStyles[style],now=ac.currentTime;
+ const osc=ac.createOscillator(),gain=ac.createGain();
+ const length=critical?.23:.15;
+ osc.type=style==='shadow'?'sawtooth':'triangle';
+ osc.frequency.setValueAtTime(voice.pitch,now);
+ osc.frequency.exponentialRampToValueAtTime(voice.end,now+length);
+ gain.gain.setValueAtTime(.001,now);
+ gain.gain.exponentialRampToValueAtTime(.23,now+.007);
+ gain.gain.exponentialRampToValueAtTime(.001,now+length);
+ osc.connect(gain);gain.connect(audio.sfxGain);
+ osc.onended=()=>{osc.disconnect();gain.disconnect()};
+ osc.start(now);osc.stop(now+length);
+ impactNoise(style==='arrow'?.045:.075,.22,voice.noise);
+}
+function paintBattleContact(b,hit,now){
+ const t=(now-hit.start)/(hit.critical?360:270);
+ if(!hit.contact||t<0||t>=1)return;
+ const [x,y]=hit.side==='hero'?effectHeroPoint(b,hit.index):effectTargetPoint(b,hit.index);
+ const color=impactStyles[hit.contact].color,r=hit.critical?28:20;
+ ctx.save();ctx.translate(x,y);ctx.globalAlpha*=1-t;
+ effectHalo(0,0,r*(1+t),color,.60);
+ if(hit.contact==='star'){
+  fxStar(0,0,r*(1-t)+2,'#eeffff',t*.5);
+ }else{
+  ctx.rotate(hit.contact==='arrow'?-.2:hit.contact==='fang'?.7:-.72);
+  const reach=r*(.65+t),width=4*(1-t);
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-reach,0);ctx.lineTo(0,-width);
+  ctx.lineTo(reach,0);ctx.lineTo(0,width);ctx.closePath();ctx.fill();
+  if(hit.contact==='fang')ctx.fillRect(-reach*.5,5,reach,1.6);
+ }
+ impactSparks(0,0,t,color,hit.critical?12:7,r+6);
+ ctx.restore();
+}
 function paintSkillFrame(b,f,t){
  if(!imageReady(effectFrames[effectMotifs[f.id]]))return false;
  const ink=effectInk[SKILLS[f.id]?.hero]||'#96de79';
@@ -219,8 +269,16 @@ function paintSkillFrame(b,f,t){
  for(const i of f.allies){
   const [x,y]=effectHeroPoint(b,i);
   if(f.id==='shield'){
+   ctx.save();ctx.globalAlpha*=pulse;ctx.strokeStyle='#c9f6ff';ctx.lineWidth=1.4;
+   ctx.beginPath();ctx.ellipse(x,y,18+t*4,27+t*5,0,-Math.PI/2,-Math.PI/2+Math.PI*2*fxUnit(t/.55));ctx.stroke();ctx.restore();
    effectHalo(x,y,31,'#84cbff',pulse*.35);effectStamp('ward',x,y,49+10*pulse,0,pulse);
   }else if(f.id==='starMend'){
+   ctx.save();ctx.globalAlpha*=pulse;ctx.fillStyle='#c2ffc8';
+   for(let n=0;n<3;n++){
+    const px=x+(n-1)*11,py=y+13-((t+n/3)%1)*29;
+    ctx.fillRect(px-3,py-1,6,2);ctx.fillRect(px-1,py-3,2,6);
+   }
+   ctx.restore();
    effectStamp('mend',x,y+9-t*14,41+14*pulse,0,pulse);
    impactSparks(x,y-5,t,'#e8ffcd',7,22);
   }

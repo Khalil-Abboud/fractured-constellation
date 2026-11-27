@@ -151,10 +151,14 @@ function offensivePower(hero,action){const s=heroStats(hero);return action==='fl
 function criticalImpact(){const viewport=$('viewport');viewport.classList.remove('critical-shake');void viewport.offsetWidth;viewport.classList.add('critical-shake');if(!audio.ctx||audio.ctx.state!=='running')return;tone(155,.12,'square',.46,audio.sfxGain);tone(62,.26,'sawtooth',.42,audio.sfxGain,.035);tone(330,.09,'triangle',.28,audio.sfxGain,.08)}
 function combatClock(){return typeof battleNow==='function'?battleNow():performance.now()}
 function startHeroActionPose(actor,duration=620){const b=state.battle;if(!b)return;const now=combatClock();b.actionPoseActor=actor;b.actionPoseUntil=Math.max(b.actionPoseUntil||0,now+duration)}
-function triggerEnemyDamageFeedback(entries,{actor=state.battle?.actor??0,duration=620}={}){
+function triggerEnemyDamageFeedback(entries,{actor=state.battle?.actor??0,duration=620,skill=null}={}){
  const b=state.battle;if(!b||!entries?.length)return;const now=combatClock(),valid=entries.filter(hit=>Number.isFinite(hit.index)&&hit.amount>0);if(!valid.length)return;
  b.hitTargets=valid.map(hit=>hit.index);b.hitStart=now;b.hitUntil=now+390;b.damageNumbers=(b.damageNumbers||[]).filter(item=>now-item.start<item.duration);
- valid.forEach(hit=>b.damageNumbers.push({...hit,start:now,duration:780}));if(actor>=0)startHeroActionPose(actor,duration);battleSfx('hit')
+ const hero=b.kind?state.party[actor>=0?actor:b.actor]?.name:'Astro';
+ const contact=impactStyle(hero,skill);
+ valid.forEach(hit=>b.damageNumbers.push({...hit,contact,start:now,duration:780}));
+ if(actor>=0)startHeroActionPose(actor,duration);
+ soundBattleContact(contact,valid.some(hit=>hit.critical));
 }
 function enemyDamageActive(b,index,now=state.time){return now<(b.hitUntil||0)&&b.hitTargets?.includes(index)}
 function enemyDamageFlash(b,index,now=state.time){return enemyDamageActive(b,index,now)&&Math.floor(Math.max(0,now-(b.hitStart||0))/55)%2===0}
@@ -199,7 +203,7 @@ function raidCommand(action){
  if(b.ap<cost){setBattleMessage(tr('Not enough AP.','لا توجد طاقة كافية.'));return}
  if(action==='herb'&&!state.herbs){setBattleMessage(tr('No healing herbs left.','لم تبقَ أعشاب شفاء.'));return}
  b.busy=true;state.battleMenu='main';b.ap-=cost;let msg='';
- if(['attack','auto','starbolt','flare'].includes(action)){const hit=rollDamage(offensivePower(h,action),22);b.enemyHP-=hit.amount;b.heroLunge=-75;b.enemyShake=true;b.magic=['starbolt','flare'].includes(action);battleSfx(b.magic?'magic':'attack');const hits=[{index:0,amount:hit.amount,critical:hit.critical}];if(b.magic)scheduleSkillImpact(hits,SKILLS[action].duration||860);else{triggerEnemyDamageFeedback(hits,{actor:0});if(hit.critical)criticalImpact();flash('#bfa7ff')}msg=(hit.critical?tr('CRITICAL! ','ضربة حرجة! '):'')+tr('Astro strikes Atrox for '+hit.amount+' damage. Atrox does not step back.','يصيب أسترو أتروكس ويسبب '+hit.amount+' ضررًا. لا يتراجع أتروكس.');battleDelay(()=>{b.heroLunge=0;b.enemyShake=false;b.magic=false},390)}
+ if(['attack','auto','starbolt','flare'].includes(action)){const hit=rollDamage(offensivePower(h,action),22);b.enemyHP-=hit.amount;b.heroLunge=-75;b.enemyShake=true;b.magic=['starbolt','flare'].includes(action);battleSfx(b.magic?'magic':'attack');const hits=[{index:0,amount:hit.amount,critical:hit.critical}];if(b.magic)scheduleSkillImpact(hits,SKILLS[action].duration||860,action);else{triggerEnemyDamageFeedback(hits,{actor:0});if(hit.critical)criticalImpact();flash('#bfa7ff')}msg=(hit.critical?tr('CRITICAL! ','ضربة حرجة! '):'')+tr('Astro strikes Atrox for '+hit.amount+' damage. Atrox does not step back.','يصيب أسترو أتروكس ويسبب '+hit.amount+' ضررًا. لا يتراجع أتروكس.');battleDelay(()=>{b.heroLunge=0;b.enemyShake=false;b.magic=false},390)}
  else if(action==='shield'){b.teamShield={expiresRound:(b.round||1)+1};battleSfx('shield');msg=tr('Orbit Shield forms around Astro.','يتشكل الدرع المداري حول أسترو.')}
  else if(action==='herb'){state.herbs--;const before=b.hp;b.hp=Math.min(heroStats(h).hp,b.hp+HERB_HEAL);showBattleHealing(0,b.hp-before);battleSfx('shield');msg=tr('Astro uses a healing herb.','يستخدم أسترو عشب شفاء.')}
  else if(action==='special'){battleSfx('menu');msg=tr('ANALYZE — Atrox vastly outmatches Astro.','تحليل — قوة أتروكس تفوق أسترو بفارق هائل.')}
@@ -259,9 +263,7 @@ drawBattle=function(){
  state.party.forEach((h,i)=>{
   const hit=b.heroHits?.[i],age=state.time-(hit?.start??-10000),impact=age>=0&&age<480;
   const [baseX,y]=heroBattlePoint(i),down=h.hp<=0;
-  // Only front-column melee fighters step forward, away from their allies.
-  const canLunge=i===b.actor&&i%2===0&&(h.name==='Shadow'||h.name==='Venom');
-  const x=baseX+(!down&&canLunge?b.heroLunge||0:0)+(!down&&impact?Math.sin(age/16)*4:0);ctx.save();
+  const x=baseX+(!down&&impact?Math.sin(age/16)*4:0);ctx.save();
   if(!down&&impact&&Math.floor(age/65)%2===0)ctx.filter='brightness(4) saturate(0)';
   drawBattleHero(h.name,x,y,battleHeroPose(b,i,down),down);
   if(!down&&b.teamShield)drawOrbitWard(h.name,x,y,state.time);else if(!down&&h.guarding){ctx.strokeStyle='#efcf83';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x-7,y-8,14,20,0,2.5,3.9);ctx.stroke()}ctx.restore()
